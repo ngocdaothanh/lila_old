@@ -1,11 +1,11 @@
 Note about installing on Ubuntu.
 
-1. Install Ubuntu server
+## Install Ubuntu server
 
 5GB disk in total is not enough for the default MongoDB in Ubuntu:
 Please make at least 3379MB available in /var/lib/mongodb/journal or use —smallfiles
 
-2. Install MongoDB
+## Install MongoDB
 
 ```
 sudo apt-get install mongodb
@@ -18,7 +18,7 @@ ps aux | grep mongo
 mongo
 ```
 
-3. Install JDK
+## Install JDK
 
 ```
 sudo apt-get install openjdk-7-jdk
@@ -26,7 +26,7 @@ sudo apt-get install openjdk-7-jdk
 
 (Oracle JDK is also OK.)
 
-4. Install Play
+## Install Play
 
 Use Play 2.2.2 (latest version).
 
@@ -39,7 +39,7 @@ sudo apt-get install unzip
 unzip play-2.2.2.zip
 ```
 
-5. Install Lila
+## Install Lila
 
 ```
 cd /home/jan/opt
@@ -61,7 +61,7 @@ Access the server at http://ns399523.ip-37-59-2.eu:9000/
 1st access will take about 1 minutes for the source files to be compiled.
 There will be error.
 
-6. Prepare images
+## Prepare images
 
 Install https://github.com/RazrFalcon/SVGCleaner and run:
 
@@ -80,7 +80,7 @@ cd /home/jan/opt/lila/public/vendor/pgn4web
 ln -s pgn4web.js pgn4web-compacted.js
 ```
 
-6. Fix domains
+## Fix domains
 
 ```
 cp conf/application.conf.main conf/application.conf
@@ -116,7 +116,7 @@ the source code of Lila or using the domain that we control.)
 37.59.2.183 en.static.ns399523.ip-37-59-2.eu
 ```
 
-7. Fix domain when develop on local machine
+## Fix domain when develop on local machine
 
 Modify big.js:
 
@@ -134,7 +134,7 @@ Modify boardEditor.js:
 var pieceTheme = '/assets/images/piece/{piece}.svg’;
 ```
 
-8. Run Lila
+## Run Lila
 
 Rerun Lila in production mode (need sudo if use port 80):
 
