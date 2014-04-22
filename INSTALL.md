@@ -61,7 +61,7 @@ Access the server at http://ns399523.ip-37-59-2.eu:9000/
 1st access will take about 1 minutes for the source files to be compiled.
 There will be error.
 
-## Prepare images
+## Optimize images
 
 Install https://github.com/RazrFalcon/SVGCleaner and run:
 
@@ -75,7 +75,37 @@ Or manually add chess piece images:
 cd /home/jan/opt/lila/public/images
 ln -s piece-src piece
 ln -s wN-bg.src.svg wN-bg.svg
+```
 
+## Optimize JS
+
+### Install Closure
+
+https://code.google.com/p/closure-compiler/
+
+Download compiler-latest.zip and create this script:
+
+```
+#!/bin/sh
+
+if [ -h $0 ]
+then
+  ROOT_DIR="$(cd "$(dirname "$(readlink -n "$0")")" && pwd)"
+else
+  ROOT_DIR="$(cd "$(dirname $0)" && pwd)"
+fi
+cd "$ROOT_DIR"
+
+java -jar compiler.jar $@
+```
+
+### Run Closure to optimize JS
+
+```
+bin/closure
+```
+
+```
 cd /home/jan/opt/lila/public/vendor/pgn4web
 ln -s pgn4web.js pgn4web-compacted.js
 ```
