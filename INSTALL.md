@@ -105,6 +105,8 @@ java -jar compiler.jar $@
 bin/closure
 ```
 
+A quick dirty way:
+
 ```
 cd /home/jan/opt/lila/public/vendor/pgn4web
 ln -s pgn4web.js pgn4web-compacted.js
