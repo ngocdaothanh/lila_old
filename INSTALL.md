@@ -57,7 +57,7 @@ cd /home/jan/opt/lila
 /home/jan/opt/play-2.2.2/play run
 ```
 
-Access the server at http://ns399523.ip-37-59-2.eu:9000/
+Access the server at http://isachy.cz:9000/
 1st access will take about 1 minutes for the source files to be compiled.
 There will be error.
 
@@ -133,19 +133,19 @@ Modify base.conf:
 ```
 net {
   #domain = "lichess.org"
-  domain = "en.ns399523.ip-37-59-2.eu"
+  domain = "en.isachy.cz"
 ```
 
 Modify /etc/hosts on your local machine (Yes! On your machine, not the server
-ns399523.ip-37-59-2.eu, because of the way Lila redirects. 37.59.2.183 is the
-IP address of ns399523.ip-37-59-2.eu. This problem can be fixed by modifying
+isachy.cz, because of the way Lila redirects. 37.59.2.183 is the
+IP address of isachy.cz. This problem can be fixed by modifying
 the source code of Lila or using the domain that we control.)
 
 ```
-37.59.2.183 en.ns399523.ip-37-59-2.eu
-37.59.2.183 socket.en.ns399523.ip-37-59-2.eu
-37.59.2.183 static.ns399523.ip-37-59-2.eu
-37.59.2.183 en.static.ns399523.ip-37-59-2.eu
+37.59.2.183 en.isachy.cz
+37.59.2.183 socket.en.isachy.cz
+37.59.2.183 static.isachy.cz
+37.59.2.183 en.static.isachy.cz
 ```
 
 ## Fix domain when develop on local machine
@@ -178,4 +178,13 @@ sudo /home/jan/opt/play-2.2.2/play “run 80”
 (See: http://stackoverflow.com/questions/8205067/how-do-i-change-the-default-port-9000-that-play-uses-when-i-execute-the-run)
 
 From browser, go to:
-http://en.ns399523.ip-37-59-2.eu/
+http://en.isachy.cz/
+
+## Create public/trans/*.js
+
+Use the password of the user `cli.username` in conf/base.conf (you may want to
+change the username and restart the server):
+
+```
+curl -X POST -v -d 'password=<the password above>&command=i18n js dump' http://en.isachy.cz/cli
+```
