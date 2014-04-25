@@ -27,3 +27,5 @@ cljs/*/.repl
 cljs/*/.lein-repl-history
 
 RUNNING_PID
+
+.*
