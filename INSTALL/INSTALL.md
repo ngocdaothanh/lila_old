@@ -173,7 +173,31 @@ Modify boardEditor.js:
 var pieceTheme = '/assets/images/piece/{piece}.svg’;
 ```
 
-## Geo-IP
+## Install Stockfish
+
+In conf/base.conf:
+
+::
+
+  ai {
+    exec_path = "/usr/bin/stockfish"
+    ...
+  }
+
+Install Stockfish:
+
+::
+
+  sudo apt-get install stockfish
+  sudo ln -s /usr/games/stockfish /usr/bin/stockfish
+
+See:
+
+* http://stockfishchess.org/
+* https://github.com/mcostalba/Stockfish
+* UCI: http://en.wikipedia.org/wiki/Universal_Chess_Interface
+
+## Install Geo-IP
 
 https://github.com/snowplow/scala-maxmind-geoip
 
