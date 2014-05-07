@@ -5,6 +5,13 @@ Note about installing on Ubuntu.
 5GB disk in total is not enough for the default MongoDB in Ubuntu:
 Please make at least 3379MB available in /var/lib/mongodb/journal or use —smallfiles
 
+## Install Nginx
+
+See isachy.cz.conf.
+
+See also:
+https://github.com/ornicar/lila/tree/ai
+
 ## Install MongoDB
 
 ```
