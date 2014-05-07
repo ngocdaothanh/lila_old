@@ -17,6 +17,14 @@ object $enumerate {
       Iteratee.foreach((obj: A) => op(obj))
     }
 
+  def over[A: TubeInColl](query: QueryBuilder, limit: Int = Int.MaxValue)(op: A => Funit): Funit =
+    query.cursor[Option[A]].enumerate(limit) run {
+      Iteratee.foldM(()) {
+        case (_, Some(obj)) => op(obj)
+        case _              => funit
+      }
+    }
+
   def bulk[A: BSONDocumentReader](query: QueryBuilder, size: Int, limit: Int = Int.MaxValue)(op: List[A] => Funit): Funit =
     query.batch(size).cursor[A].enumerateBulks(limit) run {
       Iteratee.foldM(()) {
@@ -27,6 +35,6 @@ object $enumerate {
   def fold[A: BSONDocumentReader, B](query: QueryBuilder)(zero: B)(f: (B, A) => B): Fu[B] =
     query.cursor[A].enumerate() |>>> Iteratee.fold(zero)(f)
 
-  def foldMonoid[A: BSONDocumentReader, B: Monoid](query: QueryBuilder)(f: (B, A) => B): Fu[B] =
-    fold(query)(Monoid[B].zero)(f)
+  def foldMonoid[A: BSONDocumentReader, B: Monoid](query: QueryBuilder)(f: A => B): Fu[B] =
+    fold[A, B](query)(Monoid[B].zero) { case (b, a) => f(a) |+| b }
 }

@@ -1,7 +1,7 @@
 package lila.ai
 
 import lila.db.Types.Coll
-import lila.memo.AsyncCache
+import lila.memo.MixedCache
 import lila.rating.{ Perf, Glicko }
 import org.goochjs.glicko2._
 import org.joda.time.DateTime
@@ -28,41 +28,38 @@ final class AiPerfApi(coll: Coll, cacheTtl: Duration) {
 
   private def default(level: Int) = AiPerf(level, Perf.default)
 
-  def all = AsyncCache.single[Map[Int, AiPerf]](
+  private val cache = MixedCache.single[Map[Int, AiPerf]](
     coll.find(BSONDocument()).cursor[AiPerf].collect[List]() map { perfs =>
       levels.map { l =>
         l -> (perfs find (_.level == l) getOrElse default(l))
       }.toMap
     },
-    timeToLive = cacheTtl)
+    timeToLive = cacheTtl,
+    default = levels.map { i => i -> default(i) }.toMap)
 
-  def intRatings: Fu[Map[Int, Int]] = all(true) map {
-    _ map {
-      case (level, perf) => level -> perf.intRating
-    }
+  def all: Map[Int, AiPerf] = cache get true
+
+  def intRatings: Map[Int, Int] = all map {
+    case (level, perf) => level -> perf.intRating
   }
 
-  def get(level: Int): Fu[Option[AiPerf]] = levels(level) ?? {
-    all(true) map (_ get level)
-  }
+  def get(level: Int): Option[AiPerf] = all get level
 
-  def add(level: Int, opponent: Perf, result: Glicko.Result): Funit = get(level) flatMap {
-    _ ?? { aiPerf =>
-      val aiRating = mkRating(aiPerf.perf)
-      val huRating = mkRating(opponent)
-      val results = new RatingPeriodResults()
-      result match {
-        case Glicko.Result.Draw => results.addDraw(aiRating, huRating)
-        case Glicko.Result.Win  => results.addResult(aiRating, huRating)
-        case Glicko.Result.Loss => results.addResult(huRating, aiRating)
-      }
-      system.updateRatings(results)
-      val newAiPerf = mkPerf(aiRating)
-      coll.update(
-        BSONDocument("_id" -> level),
-        BSONDocument("$set" -> BSONDocument("perf" -> newAiPerf))
-      ).void
+  def add(level: Int, opponent: Perf, result: Glicko.Result): Funit = get(level) ?? { aiPerf =>
+    val aiRating = mkRating(aiPerf.perf)
+    val huRating = mkRating(opponent)
+    val results = new RatingPeriodResults()
+    result match {
+      case Glicko.Result.Draw => results.addDraw(aiRating, huRating)
+      case Glicko.Result.Win  => results.addResult(aiRating, huRating)
+      case Glicko.Result.Loss => results.addResult(huRating, aiRating)
     }
+    system.updateRatings(results)
+    val newAiPerf = mkPerf(aiRating)
+    coll.update(
+      BSONDocument("_id" -> level),
+      BSONDocument("$set" -> BSONDocument("perf" -> newAiPerf))
+    ).void
   }
 
   private def mkRating(perf: Perf) = new Rating(

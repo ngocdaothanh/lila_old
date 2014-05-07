@@ -12,9 +12,12 @@ object Message extends LilaController {
 
   private def api = Env.message.api
   private def forms = Env.message.forms
+  private def relationApi = Env.relation.api
 
   def inbox(page: Int) = Auth { implicit ctx =>
-    me => api.inbox(me, page) map { html.message.inbox(me, _) }
+    me =>
+      api updateUser me.id
+      api.inbox(me, page) map { html.message.inbox(me, _) }
   }
 
   def preview = Auth { implicit ctx =>
@@ -23,7 +26,11 @@ object Message extends LilaController {
 
   def thread(id: String) = Auth { implicit ctx =>
     implicit me =>
-      OptionOk(api.thread(id, me)) { html.message.thread(_, forms.post) }
+      OptionFuOk(api.thread(id, me)) { thread =>
+        relationApi.blocks(thread otherUserId me, me.id) map { blocked =>
+          html.message.thread(thread, forms.post, blocked)
+        }
+      }
   }
 
   def answer(id: String) = AuthBody { implicit ctx =>
@@ -31,7 +38,9 @@ object Message extends LilaController {
       OptionFuResult(api.thread(id, me)) { thread =>
         implicit val req = ctx.body
         forms.post.bindFromRequest.fold(
-          err => BadRequest(html.message.thread(thread, err)).fuccess,
+          err => relationApi.blocks(thread otherUserId me, me.id) map { blocked =>
+            BadRequest(html.message.thread(thread, err, blocked))
+          },
           text => api.makePost(thread, text, me) inject Redirect(routes.Message.thread(thread.id) + "#bottom")
         )
       }

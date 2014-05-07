@@ -41,6 +41,7 @@ final class Env(
     joiner = joiner,
     router = hub.actor.router,
     renderer = hub.actor.renderer,
+    timeline = hub.actor.timeline,
     socketHub = socketHub,
     site = hub.socket.site,
     lobby = hub.socket.lobby,
@@ -68,7 +69,8 @@ final class Env(
       renderer = hub.actor.renderer
     )), name = ReminderName),
     isOnline = isOnline,
-    socketHub = socketHub
+    socketHub = socketHub,
+    evaluator = hub.actor.evaluator
   )), name = OrganizerName)
 
   private val tournamentScheduler = system.actorOf(Props(new Scheduler(api)))
@@ -83,6 +85,7 @@ final class Env(
     import tube.tournamentTube
     def process = {
       case "tournament" :: "typecheck" :: Nil => lila.db.Typecheck.apply[Tournament]
+      case "tournament" :: "recount" :: Nil   => api.recountAll inject "Recount done!"
     }
   }
 
@@ -97,6 +100,10 @@ final class Env(
 
     scheduler.message(3 seconds) {
       organizer -> actorApi.StartedTournaments
+    }
+
+    scheduler.message(6 minutes) {
+      organizer -> actorApi.CheckLeaders
     }
 
     scheduler.message(5 minutes) {

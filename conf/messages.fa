@@ -9,7 +9,7 @@ waiting=انتظار
 yourTurn=نوبت شماست
 aiNameLevelAiLevel=%s مرحله%s
 level=مرحله
-toggleTheChat=ضامن گپ
+toggleTheChat=گپ روشن /خاموش
 toggleSound=صدا روشن/خاموش
 chat=گپ
 resign=تسلیم
@@ -26,12 +26,12 @@ newOpponent=حریف جدید
 playWithAnotherOpponent=بازی با حریفان دیگر
 yourOpponentWantsToPlayANewGameWithYou=حریف شما می خواهد که دوباره با شما بازی کند
 joinTheGame=به بازی بپیوندید
-whitePlays=بازی بازیکن سفید
-blackPlays=بازی بازیکن سیاه
+whitePlays=سفید بازی میکند
+blackPlays=سیاه بازی میکند
 theOtherPlayerHasLeftTheGameYouCanForceResignationOrWaitForHim=حریف مقابل شما بازی را ترک کرد شما می توانید باخت وی را اعلام کنید یا منتظر او بمانید
-makeYourOpponentResign=حریف خود را بازنده معرفی کنید
-forceResignation=اجبار به باخت حریف
-forceDraw=اجبار به تساوی
+makeYourOpponentResign=حریف را مجبور به تسلیم کن
+forceResignation=بازی را ببر
+forceDraw=ادعای تساوی
 talkInChat=گپ و گفتگو
 theFirstPersonToComeOnThisUrlWillPlayWithYou=اولین کسی که به این لینک بیاید با شما بازی می کند
 whiteCreatesTheGame=بازیکن سفید میزبان است
@@ -50,7 +50,7 @@ theComputerAnalysisHasFailed=تحلیل رایانه شکست خورد
 viewTheComputerAnalysis=نمایش تحلیل رایانه
 requestAComputerAnalysis=درخواست یک تحلیل رایانه
 computerAnalysis=تجزيه تحليل كامپيوتري
-blunders=اشتباهات
+blunders=اشتباهات جدی
 mistakes=اشتباهات
 inaccuracies=بی‌دقتی‌ها
 moveTimes=مدت زمان حركت
@@ -60,9 +60,9 @@ claimADraw=ادعای تساوی
 offerDraw=پیشنهاد مساوی
 draw=مساوی
 nbConnectedPlayers=بازیکنان حاضر %s نفر
-gamesBeingPlayedRightNow=بازی در آستانه شروع می باشد
-viewAllNbGames=بازی %s مشاهده تمام
-viewNbCheckmates=مات شدن %s مشاهده
+gamesBeingPlayedRightNow=بازیهای جاری
+viewAllNbGames=بازی %s
+viewNbCheckmates=مات %s
 nbBookmarks=بازی مورد علاقه %s
 nbPopularGames=بازی پرطرفدار %s
 nbAnalysedGames=بازی آنالیز شده %s
@@ -73,13 +73,14 @@ signIn=ورود
 newToLichess=آیا در لایچس تازه واردید؟
 youNeedAnAccountToDoThat=شما برای انجام این کار به یک حساب کاربری نیاز دارید.
 signUp=ثبت نام
+computersAreNotAllowedToPlay=كامپيوتر و بازيكناني كه از كامپيوتر كمك مي گيرند اجازه بازي نخواهند داشت.لطفا  از برنامه شطرنج يا ساختمان داده هاي شطرنج ويا بازيكنان ديگر كمك نگيريد.
 games=بازی ها
 forum=انجمن
 xPostedInForumY=%s پست شده در فروم %s
 latestForumPosts=لیست آخرین پست ها در فروم شما
 players=بازیکنان شطرنج
 minutesPerSide=دقیقه در هر طرف
-variant=گوناگونی
+variant=شاخه
 timeControl=کنترل زمان
 time=زمان
 username=نام کاربری
@@ -98,14 +99,14 @@ drawOfferSent=پیشنهاد مساوی فرستاده شد
 drawOfferDeclined=پیشنهاد مساوی پذیرفته نشد
 drawOfferAccepted=پیشنهاد مساوی را پذیرفت
 drawOfferCanceled=پیشنهاد مساوی لغو شد
-yourOpponentOffersADraw=رقیب شما به شما درخواست مساوی شده در بازی را داد
+yourOpponentOffersADraw=رقیب به شما پیشنهاد مساوی داد
 accept=پذیرفتن
-decline=نپذیرفتن
+decline=رد کردن
 playingRightNow=بازی در حال حاضر
 finished=تمام شده
 abortGame=انصراف از بازی
 gameAborted=بازی لغو شد
-standard=مرسوم
+standard=استاندارد
 unlimited=نا محدود
 mode=حالت
 casual=غیر رسمی
@@ -120,21 +121,21 @@ cancelRematchOffer=لغو کردن پیشنهاد بازی دوباره
 viewRematch=مشاهده بازی دوباره
 play=بازی
 inbox=صندوق
-chatRoom=اتاق چت
+chatRoom=اتاق گپ
 spectatorRoom=اتاق تماشاچیان
 composeMessage=نوشتن پیام
-noNewMessages=هیچ پیامی هنوز اینجا نیست
+noNewMessages=پیام جدیدی نیست
 subject=موضوع
 recipient=گیرنده
 send=ارسال
 incrementInSeconds=افزایش در ثانیه
 freeOnlineChess=شطرنج آنلاین رایگان
 spectators=تماشاگران :
-nbWins=بردهای %s
-nbLosses=باختهای %s
-nbDraws=مساویهای %s
-exportGames=بازی های صادره
-color=رنگ زمینه
+nbWins=برد %s
+nbLosses=باخت %s
+nbDraws=مساوی %s
+exportGames=لیست بازیها را بفرست
+color=رنگ
 ratingRange=حدود ریتینگ
 giveNbSeconds=%s ثانیه اضافه کن
 premoveEnabledClickAnywhereToCancel=حرکت خودکار زود از موعد فعال است - برای لغو هر جای صفحه کلیک کنید
@@ -268,7 +269,8 @@ bestSlowPlayers=بهترین بازیکنان اسلو
 bewareTheGameIsRatedButHasNoClock=مراقب باشید،این بازی رتبه بنذی میشود اما بدون ساعت!
 training=تمرین
 yourPuzzleRatingX=نمره حل جدول شما : %s
-findTheBestMoveForColor=%s پیدا کردن بهترین حرکت برای
+findTheBestMoveForWhite=پیدا کردن بهترین حرکت برای سفید
+findTheBestMoveForBlack=پیدا کردن بهترین حرکت برای سیاه
 toTrackYourProgress=مسیر پیشرفت شما
 trainingSignupExplanation=براي اينكه شما دوره تمرين مناسب تري داشته باشيد لايچس تلاش مي كند براي شما جدولي انتخاب كند كه با توانايي هاي شما همخواني داشته باشد
 recentlyPlayedPuzzles=جدول های اخیر
@@ -289,7 +291,6 @@ pleaseVotePuzzle=با رای دادن مثبت یا منفی به پیشرفت �
 thankYou=ممنون
 ratingX=امتیاز %s
 playedXTimes=این جدول%s بار بازی شده است
-winRateX=امتیاز پیروزی: %s
 fromGameLink=برگرفته شده از بازي شماره %s
 startTraining=شروع تمرین
 continueTraining=ادامه دادن تمرین

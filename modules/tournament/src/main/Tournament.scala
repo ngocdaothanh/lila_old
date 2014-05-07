@@ -71,6 +71,10 @@ sealed trait Tournament {
   def createdAt = data.createdAt
 
   def isCreator(userId: String) = data.createdBy == userId
+
+  def userPairings(user: String) = pairings filter (_ contains user)
+
+  def scoreSheet(player: Player) = Score.sheet(player.id, this)
 }
 
 sealed trait Enterable extends Tournament {
@@ -100,8 +104,14 @@ sealed trait Enterable extends Tournament {
 sealed trait StartedOrFinished extends Tournament {
 
   def startedAt: DateTime
+  def withPlayers(s: Players): StartedOrFinished
+  def refreshPlayers: StartedOrFinished
 
-  def rankedPlayers = (1 to players.size) zip players
+  type RankedPlayers = List[(Int, Player)]
+  def rankedPlayers: RankedPlayers = players.foldLeft(Nil: RankedPlayers) {
+    case (Nil, p)                  => (1, p) :: Nil
+    case (list@((r0, p0) :: _), p) => ((p0.score == p.score).fold(r0, r0 + 1), p) :: list
+  }.reverse
 
   def winner = players.headOption
   def winnerUserId = winner map (_.username)
@@ -214,12 +224,15 @@ case class Started(
     "%02d:%02d".format(s / 60, s % 60)
   }
 
-  def userCurrentPov(userId: String): Option[PovRef] = {
-    playingPairings map { _ povRef userId }
-  }.flatten.headOption
+  def userCurrentPov(userId: String): Option[PovRef] =
+    playingPairings.map { _ povRef userId }.flatten.headOption
 
   def userCurrentPov(user: Option[User]): Option[PovRef] =
     user.flatMap(u => userCurrentPov(u.id))
+
+  def leaders: List[Player] = rankedPlayers filter {
+    case (rank, player) => rank <= 2 && player.score >= 8
+  } map (_._2)
 
   def finish = refreshPlayers |> { tour =>
     Finished(
@@ -238,15 +251,11 @@ case class Started(
     !!("User %s is not part of the tournament" format userId)
   )
 
+  def quickLossStreak(user: String): Boolean =
+    userPairings(user).takeWhile { pair => (pair lostBy user) && pair.quickLoss }.size >= 3
+
   def withPlayers(s: Players) = copy(players = s)
-
-  def quickLossStreak(user: String): Boolean = {
-    userPairings(user) takeWhile { pair => (pair lostBy user) && pair.quickLoss }
-  }.size >= 3
-
-  private def userPairings(user: String) = pairings filter (_ contains user)
-
-  private def refreshPlayers = withPlayers(Player refresh this)
+  def refreshPlayers = withPlayers(Player refresh this)
 
   def encode = refreshPlayers.encode(Status.Started)
 
@@ -271,6 +280,9 @@ case class Finished(
     pairings: List[Pairing]) extends StartedOrFinished {
 
   override def isFinished = true
+
+  def withPlayers(s: Players) = copy(players = s)
+  def refreshPlayers = withPlayers(Player refresh this)
 
   def encode = encode(Status.Finished)
 }

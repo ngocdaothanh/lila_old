@@ -1,5 +1,6 @@
 @(
 title: String,
+fullTitle: Option[String] = None,
 active: Option[lila.app.ui.SiteMenu.Elem] = None,
 baseline: Option[Html] = None,
 goodies: Option[Html] = None,
@@ -15,7 +16,7 @@ zen: Boolean = false)(body: Html)(implicit ctx: Context)
 <!doctype html>
 <html lang="@lang.language">
   <head>
-    <title>@isProd.fold("lichess", "[dev]") @title • @trans.freeOnlineChess()</title>
+    <title>@if(!isProd){ [dev] }@fullTitle.getOrElse{@title • lichess.org}</title>
     @if(ctx.currentBg == "dark") {
     @cssTag("dark.css")
     }
@@ -29,8 +30,10 @@ zen: Boolean = false)(body: Html)(implicit ctx: Context)
     <meta content="noindex, nofollow" name="robots">
     }
     <meta name="google" content="notranslate" />
+    @langAnnotations
   </head>
   <body class="@ctx.currentTheme.cssClass @ctx.currentBg"
+    data-sound-dir="@staticUrl("sound")"
     data-ports="@portsString"
     data-accept-languages="@acceptLanguages.mkString(",")">
     <div id="site_description">@trans.freeOnlineChessGamePlayChessNowInACleanInterfaceNoRegistrationNoAdsNoPluginRequiredPlayChessWithComputerFriendsOrRandomOpponents()</div>
@@ -44,13 +47,11 @@ zen: Boolean = false)(body: Html)(implicit ctx: Context)
       @if(!zen) {
       @siteMenu.all(ctx.me).map { elem =>
       @elem.code match {
-      case "team" if teamNbRequests(ctx) > 0 => {
-      @defining(teamNbRequests(ctx)) { nbr =>
+      case "team" if ctx.teamNbRequests > 0 => {
       <a class="goto_nav blank_if_play @elem.currentClass(active)" href="@routes.Team.requests()">
         @elem.name()
-        <span id="nb_messages" class="new_messages unread">@nbr</span>
+        <span id="nb_messages" class="new_messages unread">@ctx.teamNbRequests</span>
       </a>
-      }
       }
       case "team" => {
       <a class="goto_nav blank_if_play @elem.currentClass(active)"
@@ -180,7 +181,7 @@ zen: Boolean = false)(body: Html)(implicit ctx: Context)
     </div>
     }
     @ctx.me.map { me =>
-    <div id="friend_box" data-preload="@ctx.friends.mkString(",")">
+    <div id="friend_box" data-preload="@ctx.friends.map(_.titleName).mkString(",")">
       <div class="title"><strong class="online"> </strong> @trans.onlineFriends()</div>
       <div class="content_wrap">
         <div class="content list"></div>
@@ -194,15 +195,16 @@ zen: Boolean = false)(body: Html)(implicit ctx: Context)
     </div>
     }
     @jQueryTag
+    @underscorejsTag
     @jsTag("deps.min.js")
+    @momentjsTag
+    @powertipTag
     @jsTagCompiled("common.js")
     @signedJs.fold(jsTagCompiled("big.js"))(js => jsAt(js, false))
     @moreJs
     @if(lang.language != "en") {
     @jsAt(s"trans/${lang.language}.js")
-    @momentLang.map { l =>
-    @jsAt(s"compiled/moment-lang/$l.min.js")
-    }
+    @momentLangTag
     }
     @base.ga()
   </body>

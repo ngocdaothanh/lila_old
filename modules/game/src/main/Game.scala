@@ -21,7 +21,7 @@ case class Game(
     clock: Option[Clock],
     castleLastMoveTime: CastleLastMoveTime,
     positionHashes: PositionHash = Array(),
-    moveTimes: Vector[Int] = Vector.empty,
+    moveTimes: Vector[Int] = Vector.empty, // tenths of seconds
     mode: Mode = Mode.default,
     variant: Variant = Variant.default,
     next: Option[String] = None,
@@ -65,8 +65,9 @@ case class Game(
 
   def turnColor = Color(0 == turns % 2)
 
-  def turnOf(p: Player) = p == player
-  def turnOf(c: Color) = c == turnColor
+  def turnOf(p: Player): Boolean = p == player
+  def turnOf(c: Color): Boolean = c == turnColor
+  def turnOf(u: User): Boolean = player(u) ?? turnOf
 
   def playedTurns = turns - startedAtTurn
 
@@ -249,6 +250,7 @@ case class Game(
   )
 
   def rated = mode.rated
+  def casual = !rated
 
   def finished = status >= Status.Mate
 
@@ -256,7 +258,7 @@ case class Game(
 
   def replayable = imported || finished
 
-  def analysable = replayable && !fromPosition
+  def analysable = replayable && !fromPosition && turns > 4
 
   def fromPosition = source ?? (Source.Position==)
 

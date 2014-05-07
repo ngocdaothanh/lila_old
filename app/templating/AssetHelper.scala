@@ -16,6 +16,7 @@ trait AssetHelper {
 
   def cssTag(name: String, staticDomain: Boolean = true) = cssAt("stylesheets/" + name, staticDomain)
 
+
   def cssVendorTag(name: String, staticDomain: Boolean = true) = cssAt("vendor/" + name, staticDomain)
 
   def cssAt(path: String, staticDomain: Boolean = true) = Html {
@@ -27,23 +28,41 @@ trait AssetHelper {
 
   def jsTagCompiled(name: String) = if (isProd) jsAt("compiled/" + name) else jsTag(name)
 
-  lazy val jQueryTag = if (isProd) Html {
-    """<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>"""
-  }
-  else jsTag("vendor/jquery.min.js")
+  val jQueryTag = cdnOrLocal(
+    cdn = "http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js",
+    test = "window.jQuery",
+    local = staticUrl("javascripts/vendor/jquery.min.js"))
 
-  lazy val highchartsTag = cdnOrLocal(
-    cdn = "http://code.highcharts.com/3.0/highcharts.js",
+  val highchartsTag = cdnOrLocal(
+    cdn = "http://code.highcharts.com/4.0/highcharts.js",
     test = "window.Highcharts",
-    local = staticUrl("vendor/highcharts/highcharts.js"))
+    local = staticUrl("vendor/highcharts4/highcharts.js"))
 
-  lazy val highchartsMoreTag = cdnOrLocal(
-    cdn = "http://code.highcharts.com/3.0/highcharts-more.js",
+  val highchartsMoreTag = cdnOrLocal(
+    cdn = "http://code.highcharts.com/4.0/highcharts-more.js",
     test = "window.Highcharts",
-    local = staticUrl("vendor/highcharts/highcharts-more.js"))
+    local = staticUrl("vendor/highcharts4/highcharts-more.js"))
+
+  val momentjsTag = cdnOrLocal(
+    cdn = "http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.6.0/moment.min.js",
+    test = "window.moment",
+    local = staticUrl("vendor/momentjs.min.js"))
+
+  val powertipTag = cdnOrLocal(
+    cdn = "http://cdnjs.cloudflare.com/ajax/libs/jquery-powertip/1.2.0/jquery.powertip.min.js",
+    test = "$.powerTip",
+    local = staticUrl("vendor/powertip.min.js"))
+
+  val underscorejsTag = cdnOrLocal(
+    cdn = "http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.4/underscore-min.js",
+    test = "window._",
+    local = staticUrl("vendor/underscorejs.min.js"))
 
   private def cdnOrLocal(cdn: String, test: String, local: String) = Html {
-    s"""<script src="$cdn"></script><script>$test || document.write('<script src="$local?v=$assetVersion">\\x3C/script>')</script>"""
+    if (isProd)
+      s"""<script src="$cdn"></script><script>$test || document.write('<script src="$local">\\x3C/script>')</script>"""
+    else
+      s"""<script src="$local"></script>"""
   }
 
   def jsAt(path: String, static: Boolean = true) = Html {

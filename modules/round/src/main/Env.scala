@@ -21,6 +21,7 @@ final class Env(
     uciMemo: lila.game.UciMemo,
     rematch960Cache: lila.memo.ExpireSetMemo,
     i18nKeys: lila.i18n.I18nKeys,
+    prefApi: lila.pref.PrefApi,
     scheduler: lila.common.Scheduler) {
 
   private val settings = new {
@@ -39,6 +40,7 @@ final class Env(
     val ActorName = config getString "actor.name"
     val HijackEnabled = config getBoolean "hijack.enabled"
     val HijackSalt = config getString "hijack.salt"
+    val CollectionReminder = config getString "collection.reminder"
   }
   import settings._
 
@@ -95,6 +97,7 @@ final class Env(
     perfsUpdater = perfsUpdater,
     aiPerfApi = aiPerfApi,
     crosstableApi = crosstableApi,
+    reminder = reminder,
     bus = system.lilaBus)
 
   private lazy val rematcher = new Rematcher(
@@ -107,6 +110,7 @@ final class Env(
     bus = system.lilaBus,
     finisher = finisher,
     cheatDetector = cheatDetector,
+    reminder = reminder,
     uciMemo = uciMemo)
 
   // public access to AI play, for setup.Processor usage
@@ -117,10 +121,6 @@ final class Env(
     finisher = finisher)
 
   private lazy val cheatDetector = new CheatDetector(reporter = hub.actor.report)
-
-  lazy val meddler = new Meddler(
-    roundMap = roundMap,
-    socketHub = socketHub)
 
   lazy val messenger = new Messenger(
     socketHub = socketHub,
@@ -135,13 +135,16 @@ final class Env(
   def version(gameId: String): Fu[Int] =
     socketHub ? Ask(gameId, GetVersion) mapTo manifest[Int]
 
+  private lazy val reminder = new Reminder(db(CollectionReminder))
+  def nowPlaying = reminder.nowPlaying
+
   private[round] def animationDelay = AnimationDelay
   private[round] def moretimeSeconds = Moretime.toSeconds
 
   {
     import scala.concurrent.duration._
 
-    scheduler.future(0.33 hour, "game: finish by clock") {
+    scheduler.future(0.23 hour, "game: finish by clock") {
       titivate.finishByClock
     }
 
@@ -150,13 +153,14 @@ final class Env(
     }
   }
 
-  private lazy val titivate = new Titivate(roundMap, meddler, scheduler)
+  private lazy val titivate = new Titivate(roundMap, scheduler)
 
   lazy val hijack = new Hijack(HijackTimeout, HijackSalt, HijackEnabled)
 
-  private lazy val takebacker = new Takebacker(
+  lazy val takebacker = new Takebacker(
     messenger = messenger,
-    uciMemo = uciMemo)
+    uciMemo = uciMemo,
+    prefApi = prefApi)
 
   lazy val moveBroadcast = system.actorOf(Props(new MoveBroadcast))
   lazy val tvBroadcast = system.actorOf(Props(new TvBroadcast))
@@ -176,5 +180,6 @@ object Env {
     uciMemo = lila.game.Env.current.uciMemo,
     rematch960Cache = lila.game.Env.current.cached.rematch960,
     i18nKeys = lila.i18n.Env.current.keys,
+    prefApi = lila.pref.Env.current.api,
     scheduler = lila.common.PlayApp.scheduler)
 }

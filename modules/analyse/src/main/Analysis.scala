@@ -27,6 +27,11 @@ case class Analysis(
     i.best map { b => i.ply -> b.keys }
   }).flatten.toMap
 
+  def complete(infos: List[Info]) = copy(
+    infos = infos,
+    done = true,
+    old = false)
+
   def encode: RawAnalysis = RawAnalysis(id, encodeInfos, done, date, old)
   private def encodeInfos = Info encodeList infos
 
@@ -40,7 +45,7 @@ case class Analysis(
 
   def valid = encodeInfos.replace(";", "").nonEmpty
 
-  def stalled = (done && !valid) || (!done && date.isBefore(DateTime.now minusMinutes 31))
+  def stalled = (done && !valid) || (!done && date.isBefore(DateTime.now minusHours 2))
 }
 
 object Analysis {

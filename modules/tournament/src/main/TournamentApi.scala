@@ -14,7 +14,7 @@ import lila.game.{ Game, GameRepo }
 import lila.hub.actorApi.lobby.ReloadTournaments
 import lila.hub.actorApi.map.Tell
 import lila.hub.actorApi.router.Tourney
-import lila.round.actorApi.round.{ AbortForce, ResignColor }
+import lila.round.actorApi.round.ResignColor
 import lila.socket.actorApi.SendToFlag
 import lila.user.{ User, UserRepo }
 import makeTimeout.short
@@ -24,6 +24,7 @@ private[tournament] final class TournamentApi(
     joiner: GameJoiner,
     router: ActorSelection,
     renderer: ActorSelection,
+    timeline: ActorSelection,
     socketHub: ActorRef,
     site: ActorSelection,
     lobby: ActorSelection,
@@ -86,25 +87,26 @@ private[tournament] final class TournamentApi(
   def finish(started: Started): Fu[Tournament] =
     if (started.pairings.isEmpty) $remove(started) >>- reloadSiteSocket >>- lobbyReload inject started
     else started.readyToFinish.fold({
-      val pairingsToAbort = started.playingPairings
       val finished = started.finish
       $update(finished) >>-
         sendTo(started.id, ReloadPage) >>-
         reloadSiteSocket >>-
-        (pairingsToAbort foreach { pairing =>
-          roundMap ! Tell(pairing.gameId, AbortForce)
-        }) >>
-        finished.players.filter(_.score > 0).map(p => UserRepo.incToints(p.id)(p.score)).sequenceFu inject finished
+        finished.players.filter(_.score > 0).map { p =>
+          UserRepo.incToints(p.id, p.score)
+        }.sequenceFu inject finished
     }, fuccess(started))
 
   def join(tour: Enterable, me: User, password: Option[String]): Funit =
     (tour.join(me, password)).future flatMap { tour2 =>
       TournamentRepo withdraw me.id flatMap { withdrawIds =>
-        $update(tour2) >>-
-          sendTo(tour.id, Joining(me.id)) >>-
-          ((tour.id :: withdrawIds) foreach socketReload) >>-
-          reloadSiteSocket >>-
+        $update(tour2) >>- {
+          sendTo(tour.id, Joining(me.id))
+          (tour.id :: withdrawIds) foreach socketReload
+          reloadSiteSocket
           lobbyReload
+          import lila.hub.actorApi.timeline.{ Propagate, TourJoin }
+          timeline ! (Propagate(TourJoin(me.id, tour2.id, tour2.name)) toFollowersOf me.id)
+        }
       }
     }
 
@@ -125,23 +127,25 @@ private[tournament] final class TournamentApi(
     case finished: Finished => fufail("Cannot withdraw from finished tournament " + finished.id)
   }
 
-  def finishGame(game: Game): Fu[Option[Tournament]] = for {
-    tour ← optionT(game.tournamentId ?? TournamentRepo.startedById)
-    result ← optionT {
-      val tour2 = tour.updatePairing(game.id, _.finish(game.status, game.winnerUserId, game.turns))
-      $update(tour2) >>
-        tripleQuickLossWithdraw(tour2, game.loserUserId) inject
-        tour2.some
+  def finishGame(game: Game): Fu[Option[Tournament]] =
+    (game.tournamentId ?? TournamentRepo.startedById) flatMap {
+      _ ?? { tour =>
+        val tour2 = tour.updatePairing(game.id, _.finish(game.status, game.winnerUserId, game.turns))
+        $update(tour2) >>
+          tripleQuickLossWithdraw(tour2, game.loserUserId) inject
+          tour2.some
+      }
     }
-  } yield result
+
+  def recountAll = UserRepo.removeAllToints >>
+    $enumerate.over($query[Finished](TournamentRepo.finishedQuery)) { (tour: Finished) =>
+      val tour2 = tour.refreshPlayers
+      $update(tour2) zip
+        tour.players.filter(_.score > 0).map(p => UserRepo.incToints(p.id, p.score)).sequenceFu void
+    }
 
   private def tripleQuickLossWithdraw(tour: Started, loser: Option[String]): Funit =
     loser.filter(tour.quickLossStreak).??(withdraw(tour, _))
-
-  private def userIdWhoLostOnTimeWithoutMoving(game: Game): Option[String] =
-    game.playerWhoDidNotMove
-      .flatMap(_.userId)
-      .filter(_ => List(chess.Status.Timeout, chess.Status.Outoftime) contains game.status)
 
   private def lobbyReload {
     TournamentRepo.allCreatedSorted foreach { tours =>

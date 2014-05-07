@@ -1,4 +1,4 @@
-@(preload: String, userTimeline: List[lila.timeline.Entry], forumRecent: List[lila.forum.PostLiteView], tours: List[lila.tournament.Created], featured: Option[Game], leaderboard: List[User], progress: List[User], puzzle: Option[lila.puzzle.DailyPuzzle])(implicit ctx: Context)
+@(preload: String, userTimeline: List[lila.timeline.Entry], forumRecent: List[lila.forum.PostLiteView], tours: List[lila.tournament.Created], featured: Option[Game], leaderboard: List[User], progress: List[User], puzzle: Option[lila.puzzle.DailyPuzzle], playing: List[Pov], streams: List[lila.tv.StreamOnAir])(implicit ctx: Context)
 
 @underchat = {
 <div id="featured_game" title="@trans.watchLichessTV()">
@@ -22,6 +22,16 @@
 
 @goodies = {
 @ctx.me.map { u =>
+@if(playing.nonEmpty) {
+<div id="now_playing">
+  @playing.map { p =>
+  <a class="is button" href="@routes.Round.player(p.fullId)">
+    @playerUsername(p.opponent)<br />@trans.yourTurn()
+  </a>
+  }
+</div>
+}
+<div id="streams_on_air">@tv.streamsOnAir(streams)</div>
 <div id="timeline" data-href="@routes.Lobby.timeline">
   @timeline.entries(userTimeline)
   <div class="links clearfix">
@@ -36,6 +46,7 @@
 
 @base.layout(
 title = "",
+fullTitle = Some("lichess.org • " + trans.freeOnlineChess.str()),
 baseline = baseline.some,
 active = siteMenu.play.some,
 goodies = goodies.some,

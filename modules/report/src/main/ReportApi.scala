@@ -12,7 +12,7 @@ import tube.reportTube
 
 private[report] final class ReportApi(evaluator: ActorSelection) {
 
-  def create(setup: ReportSetup, by: User): Funit =
+  def create(setup: ReportSetup, by: User, update: Boolean = false): Funit =
     Reason(setup.reason).fold[Funit](fufail("Invalid report reason " + setup.reason)) { reason =>
       val user = setup.user
       val report = Report.make(
@@ -21,11 +21,13 @@ private[report] final class ReportApi(evaluator: ActorSelection) {
         text = setup.text,
         createdBy = by)
       (!report.isCheat || !user.engine) ?? {
-        existsToday(user, reason) flatMap {
-          case true =>
-            logger.info(s"Skip existing report creation: $reason $user")
+        findRecent(user, reason) flatMap {
+          case Some(existing) if update =>
+            $update($select(existing.id), $set("text" -> report.text))
+          case Some(_) =>
+            logger.info(s"skip existing report creation: $reason $user")
             funit
-          case false => $insert(report) >>- {
+          case None => $insert(report) >>- {
             if (report.isCheat && report.isManual) evaluator ! user
           }
         }
@@ -33,14 +35,14 @@ private[report] final class ReportApi(evaluator: ActorSelection) {
     }
 
   def autoCheatReport(userId: String, text: String): Funit = {
-    logger.info(s"auto cheat reaport $userId: $text")
+    logger.info(s"auto cheat reaport $userId: ${~text.lines.toList.headOption}")
     UserRepo byId userId zip UserRepo.lichess flatMap {
       case (Some(user), Some(lichess)) => create(ReportSetup(
         user = user,
         reason = "cheat",
         text = text,
         gameId = "",
-        move = ""), lichess)
+        move = ""), lichess, update = true)
       case _ => funit
     }
   }
@@ -55,11 +57,11 @@ private[report] final class ReportApi(evaluator: ActorSelection) {
 
   def recent = $find($query.all sort $sort.createdDesc, 50)
 
-  def existsToday(user: User, reason: Reason) =
-    $count.exists(Json.obj(
-      "createdAt" -> (DateTime.now minusDays 1),
+  private def findRecent(user: User, reason: Reason): Fu[Option[Report]] =
+    $find.one(Json.obj(
+      "createdAt" -> $gt($date(DateTime.now minusDays 3)),
       "user" -> user.id,
       "reason" -> reason.name))
 
-  private val logger = play.api.Logger("Report")
+  private val logger = play.api.Logger("report")
 }

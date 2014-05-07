@@ -13,9 +13,10 @@ object ApplicationBuild extends Build {
     libraryDependencies ++= Seq(
       scalaz, scalalib, hasher, config, apache, scalaTime,
       csv, jgit, actuarius, elastic4s, findbugs, RM,
-      PRM, spray.caching),
+      PRM, spray.caching, maxmind),
       scalacOptions := compilerOptions,
       sources in doc in Compile := List(),
+      incOptions := incOptions.value.withNameHashing(true),
       templatesImport ++= Seq(
         "lila.game.{ Game, Player, Pov }",
         "lila.user.{ User, UserContext }",
@@ -31,7 +32,7 @@ object ApplicationBuild extends Build {
     gameSearch, timeline, forum, forumSearch, team, teamSearch,
     ai, analyse, mod, monitor, site, round, lobby, setup,
     importer, tournament, relation, report, pref, simulation,
-    evaluation, chat, puzzle)
+    evaluation, chat, puzzle, tv, coordinate)
 
   lazy val moduleRefs = modules map projectToRef
   lazy val moduleCPDeps = moduleRefs map { new sbt.ClasspathDependency(_, None) }
@@ -48,13 +49,17 @@ object ApplicationBuild extends Build {
     libraryDependencies ++= provided(play.api, RM, PRM)
   )
 
+  lazy val coordinate = project("coordinate", Seq(common, db)).settings(
+    libraryDependencies ++= provided(play.api, RM, PRM)
+  )
+
   lazy val evaluation = project("evaluation", Seq(
     common, hub, db, user, game)).settings(
     libraryDependencies ++= provided(play.api, RM, PRM)
   )
 
   lazy val simulation = project("simulation", Seq(
-    common, hub, socket, game, round, setup)).settings(
+    common, hub, socket, game, tv, round, setup)).settings(
     libraryDependencies ++= provided(play.api, RM)
   )
 
@@ -109,6 +114,11 @@ object ApplicationBuild extends Build {
       play.api, RM, PRM, elastic4s)
   )
 
+  lazy val tv = project("tv", Seq(common, db, hub, game, user, chess)).settings(
+    libraryDependencies ++= provided(
+      play.api, RM, PRM)
+  )
+
   lazy val analyse = project("analyse", Seq(common, hub, chess, game, user)).settings(
     libraryDependencies ++= provided(
       play.api, RM, PRM, spray.caching)
@@ -144,10 +154,10 @@ object ApplicationBuild extends Build {
 
   lazy val security = project("security", Seq(common, hub, db, user)).settings(
     libraryDependencies ++= provided(
-      play.api, RM, PRM, spray.caching)
+      play.api, RM, PRM, maxmind)
   )
 
-  lazy val relation = project("relation", Seq(common, db, memo, hub, user, game)).settings(
+  lazy val relation = project("relation", Seq(common, db, memo, hub, user, game, pref)).settings(
     libraryDependencies ++= provided(play.api, RM, PRM)
   )
 

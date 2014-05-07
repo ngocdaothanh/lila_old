@@ -28,6 +28,7 @@ body.dark #crosstable td {
 }
 body.dark #reconnecting,
 body.dark #chessboard .board-b72b1,
+body.dark #trainer .lichess_board,
 body.dark .mini_board,
 body.dark #nb_connected_players,
 body.dark #chat div.top,
@@ -43,13 +44,13 @@ body.dark div.game_config .optional_config,
 body.dark .ui-state-default,
 body.dark .ui-widget-content,
 body.dark div.lichess_goodies div.box,
-body.dark #puzzle div.box,
-body.dark #puzzle h1,
+body.dark div.training div.box,
 body.dark div.lichess_table,
 body.dark div.lichess_separator,
 body.dark div.lichess_table_wrap > div.clock > div.time,
 body.dark #GameText,
 body.dark #tournament_side,
+body.dark #tournament div.standing_wrap,
 body.dark #GameBoard,
 body.dark div.shortcuts .title,
 body.dark div.content_box,
@@ -101,7 +102,15 @@ body.dark div.user_show div.content_box_inter.tabs,
 body.dark #enterable_tournaments table.scheduled,
 body.dark div.user_show .mod_zone .listings,
 body.dark div.user_show .mod_zone .slist,
-body.dark div.analysis_menu > a {
+body.dark div.user_show .note_zone,
+body.dark div.user_show .note_zone div,
+body.dark div.analysis_menu > a,
+body.dark div.content_box.prefs form li,
+body.dark div.content_box.prefs fieldset,
+body.dark #claim_draw_zone,
+body.dark div.force_resign_zone,
+body.dark div.proposed_takeback,
+body.dark div.offered_draw {
   border-color: #3d3d3d;
 }
 body.dark #timeline,
@@ -153,7 +162,9 @@ body.dark div.undertable_top span.title {
   color: #777;
 }
 body.dark #GameText a:hover,
-body.dark #crosstable td a {
+body.dark #crosstable td a,
+body.dark #hook_filter td > label.hover:hover,
+body.dark div.promotion_choice {
   background: #000;
 }
 body.dark #chat .messages,
@@ -180,9 +191,6 @@ body.dark #hook_filter {
 }
 body.dark #hook_filter td > label {
   color: #c0c0c0;
-}
-body.dark #hook_filter td > label.hover:hover {
-  background: #000;
 }
 body.dark div.undertable tr:nth-child(even) td,
 body.dark #hooks_wrap,

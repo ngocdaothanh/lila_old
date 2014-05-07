@@ -21,9 +21,11 @@ private[ai] final class Server(
       manifest[Option[String]] flatten "[stockfish] play failed" map MoveResult.apply
   }
 
-  def analyse(uciMoves: List[String], initialFen: Option[String]): Fu[List[Info]] = {
-    implicit val timeout = makeTimeout(config.analyseTimeout)
-    (queue ? FullAnalReq(uciMoves take config.analyseMaxPlies, initialFen map chess960Fen)) mapTo manifest[List[Info]]
+  def analyse(uciMoves: List[String], initialFen: Option[String], requestedByHuman: Boolean): Fu[List[Info]] = {
+    implicit val timeout = makeTimeout {
+      if (requestedByHuman) 1.hour else 24.hours
+    }
+    (queue ? FullAnalReq(uciMoves take config.analyseMaxPlies, initialFen map chess960Fen, requestedByHuman)) mapTo manifest[List[Info]]
   }
 
   private def chess960Fen(fen: String) = (Forsyth << fen).fold(fen) { situation =>

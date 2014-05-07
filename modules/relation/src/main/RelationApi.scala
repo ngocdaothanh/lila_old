@@ -16,7 +16,10 @@ final class RelationApi(
     actor: ActorSelection,
     bus: lila.common.Bus,
     getOnlineUserIds: () => Set[String],
-    timeline: ActorSelection) {
+    timeline: ActorSelection,
+    followable: String => Fu[Boolean],
+    maxFollow: Int,
+    maxBlock: Int) {
 
   def followers(userId: ID) = cached followers userId
   def following(userId: ID) = cached following userId
@@ -27,9 +30,13 @@ final class RelationApi(
 
   def nbFollowers(userId: ID) = followers(userId) map (_.size)
   def nbFollowing(userId: ID) = following(userId) map (_.size)
+  def nbBlocking(userId: ID) = blocking(userId) map (_.size)
   def nbBlockers(userId: ID) = blockers(userId) map (_.size)
 
-  def friends(userId: ID) = cached friends userId
+  def friends(userId: ID) = following(userId) zip followers(userId) map {
+    case (f1, f2) => f1 intersect f2
+  }
+
   def areFriends(u1: ID, u2: ID) = friends(u1) map (_ contains u2)
 
   def follows(u1: ID, u2: ID) = following(u1) map (_ contains u2)
@@ -44,25 +51,29 @@ final class RelationApi(
 
   def follow(u1: ID, u2: ID): Funit =
     if (u1 == u2) funit
-    else relation(u1, u2) flatMap {
-      case Some(Follow) => funit
-      case _            => doFollow(u1, u2)
+    else followable(u2) zip relation(u1, u2) flatMap {
+      case (false, _)        => funit
+      case (_, Some(Follow)) => funit
+      case _ => RelationRepo.follow(u1, u2) >> limitFollow(u1) >>
+        refresh(u1, u2) >>-
+        (timeline ! Propagate(
+          FollowUser(u1, u2)
+        ).toFriendsOf(u1).toUsers(List(u2)))
     }
 
-  private[relation] def autofollow(u1: ID, u2: ID): Funit = doFollow(u1, u2)
+  private def limitFollow(u: ID) = nbFollowing(u) flatMap { nb =>
+    (nb >= maxFollow) ?? RelationRepo.drop(u, true, nb - maxFollow + 1)
+  }
 
-  private def doFollow(u1: ID, u2: ID) =
-    RelationRepo.follow(u1, u2) >>
-      refresh(u1, u2) >>-
-      (timeline ! Propagate(
-        FollowUser(u1, u2)
-      ).toFriendsOf(u1).toUsers(List(u2)))
+  private def limitBlock(u: ID) = nbBlocking(u) flatMap { nb =>
+    (nb >= maxBlock) ?? RelationRepo.drop(u, false, nb - maxBlock + 1)
+  }
 
   def block(u1: ID, u2: ID): Funit =
     if (u1 == u2) funit
     else relation(u1, u2) flatMap {
       case Some(Block) => funit
-      case _ => RelationRepo.block(u1, u2) >> refresh(u1, u2) >>-
+      case _ => RelationRepo.block(u1, u2) >> limitBlock(u1) >> refresh(u1, u2) >>-
         bus.publish(lila.hub.actorApi.relation.Block(u1, u2), 'relation)
     }
 

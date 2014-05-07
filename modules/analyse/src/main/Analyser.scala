@@ -1,21 +1,22 @@
 package lila.analyse
 
 import scala.concurrent.Future
+import scala.util.{ Success, Failure }
 
 import akka.actor.ActorSelection
-import akka.pattern.ask
 import chess.format.UciDump
 import chess.Replay
-import org.joda.time.DateTime
 
 import lila.db.api._
 import lila.game.actorApi.InsertGame
 import lila.game.tube.gameTube
 import lila.game.{ Game, GameRepo }
-import makeTimeout.veryLarge
 import tube.analysisTube
 
-final class Analyser(ai: ActorSelection, indexer: ActorSelection) {
+final class Analyser(
+    ai: ActorSelection,
+    indexer: ActorSelection,
+    evaluator: ActorSelection) {
 
   def get(id: String): Fu[Option[Analysis]] = AnalysisRepo byId id flatMap evictStalled
 
@@ -30,7 +31,7 @@ final class Analyser(ai: ActorSelection, indexer: ActorSelection) {
   def hasMany(ids: Seq[String]): Fu[Set[String]] =
     $primitive[Analysis, String]($select byIds ids, "_id")(_.asOpt[String]) map (_.toSet)
 
-  def getOrGenerate(id: String, userId: String, admin: Boolean): Fu[Analysis] = {
+  def getOrGenerate(id: String, userId: String, admin: Boolean, auto: Boolean = false): Fu[Analysis] = {
 
     def generate: Fu[Analysis] =
       admin.fold(fuccess(none), AnalysisRepo userInProgress userId) flatMap {
@@ -42,32 +43,46 @@ final class Analyser(ai: ActorSelection, indexer: ActorSelection) {
     def doGenerate: Fu[Analysis] =
       $find.byId[Game](id) map (_ filter (_.analysable)) zip
         (GameRepo initialFen id) flatMap {
-          case (Some(game), initialFen) => (for {
-            _ ← AnalysisRepo.progress(id, userId)
-            replay ← Replay(game.pgnMoves mkString " ", initialFen, game.variant).future
-            uciMoves = UciDump(replay)
-            infos ← ai ? lila.hub.actorApi.ai.Analyse(uciMoves, initialFen) mapTo manifest[List[Info]]
-            analysis = Analysis(id, infos, true, DateTime.now)
-          } yield UciToPgn(replay, analysis)) flatFold (
-            e => fufail[Analysis](e.getMessage), {
-            case (a, errors) => {
-              errors foreach { e => logwarn(s"[analyser UciToPgn] $id $e") }
-              if (a.valid) {
-                AnalysisRepo.done(id, a)
-                indexer ! InsertGame(game)
-                fuccess(a)
+          case (Some(game), initialFen) => AnalysisRepo.progress(id, userId) >> {
+            Replay(game.pgnMoves mkString " ", initialFen, game.variant).fold(
+              fufail(_),
+              replay => {
+                ai ! lila.hub.actorApi.ai.Analyse(game.id, UciDump(replay), initialFen, requestedByHuman = !auto)
+                AnalysisRepo byId id flatten "Missing analysis"
               }
-              else fufail(s"[analyse] invalid (empty infos): $id")
-            }
+            )
           }
-          )
-          case _ => fufail[Analysis]("[analysis] %s no game or pgn found" format (id))
-        } addFailureEffect {
-          _ => AnalysisRepo remove id
+          case _ => fufail(s"[analysis] game $id is missing")
         }
 
     get(id) flatMap {
       _.fold(generate)(fuccess(_))
     }
   }
+
+  def complete(id: String, data: String) =
+    $find.byId[Game](id) zip get(id) zip (GameRepo initialFen id) flatMap {
+      case ((Some(game), Some(a1)), initialFen) => Info decodeList data match {
+        case None => fufail(s"[analysis] $data")
+        case Some(infos) => Replay(game.pgnMoves mkString " ", initialFen, game.variant).fold(
+          fufail(_),
+          replay => UciToPgn(replay, a1 complete infos) match {
+            case (analysis, errors) =>
+              errors foreach { e => logwarn(s"[analysis UciToPgn] $id $e") }
+              if (analysis.valid) {
+                play.api.Logger("analysis").info(s"success http://lichess.org/$id")
+                indexer ! InsertGame(game)
+                AnalysisRepo.done(id, analysis) >>- {
+                  game.userIds foreach { userId =>
+                    evaluator ! lila.hub.actorApi.evaluation.Refresh(userId)
+                  }
+                } inject analysis
+              }
+              else fufail(s"[analysis] invalid $id")
+          })
+      }
+      case _ => fufail(s"[analysis] complete non-existing $id")
+    } addFailureEffect {
+      _ => AnalysisRepo remove id
+    }
 }

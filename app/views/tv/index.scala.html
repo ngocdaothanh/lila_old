@@ -1,6 +1,6 @@
 @(pov: Pov, version: Int, games: List[Game], tour: Option[lila.tournament.Tournament], cross: Option[lila.game.Crosstable], flip: Boolean)(implicit ctx: Context)
 
-@title = @{ "TV" }
+@title = @{ s"TV ${playerText(pov.player)} vs ${playerText(pov.opponent)}" }
 
 @underchat = {
 <div class="watchers" data-icon="v">
@@ -11,7 +11,7 @@
 @goodies = {
 <div class="lichess_goodies">
   <div class="box">
-    <h2>Lichess TV</h2>
+    <h2 data-icon="1">&nbsp;Lichess TV</h2>
     <br />
     <div class="confrontation">
       <div class="vs">@playerLink(pov.game.firstPlayer, withRating = false, withOnline = false) vs @playerLink(pov.game.secondPlayer, withRating = false, withOnline = false)</div>

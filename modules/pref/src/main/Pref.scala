@@ -10,13 +10,21 @@ case class Pref(
     dark: Boolean,
     theme: String,
     autoQueen: Int,
+    autoThreefold: Int,
+    takeback: Int,
     clockTenths: Boolean,
     clockBar: Boolean,
-    premove: Boolean) {
+    premove: Boolean,
+    captured: Boolean,
+    follow: Boolean,
+    coordColor: Int,
+    puzzleDifficulty: Int) {
 
   import Pref._
 
   def realTheme = Theme(theme)
+
+  def coordColorName = Color.choices.toMap.get(coordColor).fold("random")(_.toLowerCase)
 
   def get(name: String): Option[String] = name match {
     case "bg"    => dark.fold("dark", "light").some
@@ -32,15 +40,59 @@ case class Pref(
 
 object Pref {
 
+  object Difficulty {
+    val EASY = 1
+    val NORMAL = 2
+    val HARD = 3
+
+    val choices = Seq(
+      EASY -> "Easy",
+      NORMAL -> "Normal",
+      HARD -> "Hard")
+  }
+
+  object Color {
+    val WHITE = 1
+    val RANDOM = 2
+    val BLACK = 3
+
+    val choices = Seq(
+      WHITE -> "White",
+      RANDOM -> "Random",
+      BLACK -> "Black")
+  }
+
   object AutoQueen {
     val NEVER = 1
     val PREMOVE = 2
     val ALWAYS = 3
 
     val choices = Seq(
-      NEVER -> "Always choose manually",
-      PREMOVE -> "Automatic queen on premove",
-      ALWAYS -> "Always automatic queen")
+      NEVER -> "Never",
+      ALWAYS -> "Always",
+      PREMOVE -> "When premoving")
+  }
+
+  object AutoThreefold {
+    val NEVER = 1
+    val TIME = 2
+    val ALWAYS = 3
+
+    val choices = Seq(
+      NEVER -> "Never",
+      ALWAYS -> "Always",
+      TIME -> "When time remaining < 30 seconds")
+  }
+
+  object Takeback {
+    val NEVER = 1
+    val CASUAL = 2
+    val ALWAYS = 3
+
+    val choices = Seq(
+      NEVER -> "Never",
+      ALWAYS -> "Always",
+      CASUAL -> "In casual games only")
   }
 
   def create(id: String) = Pref(
@@ -48,9 +100,15 @@ object Pref {
     dark = false,
     theme = Theme.default.name,
     autoQueen = AutoQueen.PREMOVE,
+    autoThreefold = AutoThreefold.TIME,
+    takeback = Takeback.ALWAYS,
     clockTenths = true,
     clockBar = true,
-    premove = true)
+    premove = true,
+    captured = true,
+    follow = true,
+    coordColor = Color.RANDOM,
+    puzzleDifficulty = Difficulty.NORMAL)
 
   val default = create("")
 
@@ -65,7 +123,13 @@ object Pref {
     "dark" -> default.dark,
     "theme" -> default.theme,
     "autoQueen" -> default.autoQueen,
+    "autoThreefold" -> default.autoThreefold,
+    "takeback" -> default.takeback,
     "clockTenths" -> default.clockTenths,
     "clockBar" -> default.clockBar,
-    "premove" -> default.premove)
+    "premove" -> default.premove,
+    "captured" -> default.captured,
+    "follow" -> true,
+    "coordColor" -> default.coordColor,
+    "puzzleDifficulty" -> default.puzzleDifficulty)
 }

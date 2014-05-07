@@ -10,9 +10,7 @@ function withStorage(f) {
   // can throw an exception when storage is full
   try {
     return !!window.localStorage ? f(window.localStorage) : null;
-  } catch (e) {
-    if (window.console) console.debug(e);
-  }
+  } catch (e) {}
 }
 var storage = {
   get: function(k) {
@@ -765,9 +763,9 @@ var storage = {
   });
 
   $.sound = (function() {
-    var baseUrl = 'http://' + document.domain.replace(/^\w+/, 'static') + '/assets/sound/';
+    var baseUrl = $('body').data('sound-dir');
     var makeAudio = function(file, volume) {
-      var a = new Audio(baseUrl + file);
+      var a = new Audio(baseUrl + '/' + file);
       a.volume = volume;
       return a;
     };
@@ -911,7 +909,7 @@ var storage = {
 
       if (!self.options.player.spectator) {
         var okToLeave = function() {
-          return lichess.hasToReload || !self.options.game.started || self.options.game.finished;
+          return lichess.hasToReload || !self.options.game.started || self.options.game.finished || !self.options.game.clock;
         };
         $(window).on('beforeunload', function() {
           if (!okToLeave()) return 'There is a game in progress!';
@@ -960,18 +958,18 @@ var storage = {
             },
             castling: function(event) {
               self.element.queue(function() {
-                $("div#" + event.rook[1], self.$board).append($("div#" + event.rook[0] + " div.lichess_piece.rook", self.$board));
+                $("div#" + event.rook[1], self.$board).append($("div#" + event.rook[0] + " div.piece.rook", self.$board));
                 // if the king is beeing animated, stop it now
                 $('body > div.king').each(function($k) {
                   $.stop(true, true);
                 });
-                $("div#" + event.king[1], self.$board).append($("div.lichess_piece.king." + event.color, self.$board));
+                $("div#" + event.king[1], self.$board).append($("div.piece.king." + event.color, self.$board));
                 self.element.dequeue();
               });
             },
             promotion: function(event) {
               self.element.queue(function() {
-                $("div#" + event.key + " div.lichess_piece").addClass(event.pieceClass).removeClass("pawn");
+                $("div#" + event.key + " div.piece").addClass(event.pieceClass).removeClass("pawn");
                 self.element.dequeue();
               });
             },
@@ -983,7 +981,7 @@ var storage = {
             },
             enpassant: function(event) {
               self.element.queue(function() {
-                self.killPiece($("div#" + event + " div.lichess_piece", self.$board));
+                self.killPiece($("div#" + event + " div.piece", self.$board));
                 self.element.dequeue();
               });
             },
@@ -1029,7 +1027,8 @@ var storage = {
               } catch (e) {}
               setTimeout(function() {
                 self.element.find('.ui-draggable-dragging').remove();
-              }, 500);
+                self.$board.find('.piece:not(:visible)').show();
+              }, 300);
               $('div.underboard').hide().filter('.replay_and_analyse').show();
               // But enqueue the visible changes
               self.element.queue(function() {
@@ -1114,11 +1113,15 @@ var storage = {
       }
     },
     movePiece: function(from, to, callback, mine) {
+
+      // must stop any animation first, so the piece can get killed
+      $('body > div.piece').stop(true, true);
+
       var self = this,
-        $piece = self.$board.find("div#" + from + " div.lichess_piece"),
+        $piece = self.$board.find("div#" + from + " div.piece"),
         $from = $("div#" + from, self.$board),
         $to = $("div#" + to, self.$board),
-        $killed = $to.find("div.lichess_piece");
+        $killed = $to.find("div.piece");
 
       // already moved
       if (!$piece.length) {
@@ -1145,10 +1148,9 @@ var storage = {
         if ($.isFunction(callback || null)) callback();
       };
 
-      var animD = mine ? 0 : self.options.animation_delay;
+      var animD = mine ? 0 : self.animationDelay();
 
-      $('body > div.lichess_piece').stop(true, true);
-      if (animD < 100) {
+      if (animD < 50) {
         afterMove();
       } else {
         $("body").append($piece.css({
@@ -1160,6 +1162,16 @@ var storage = {
           left: $to.offset().left
         }, animD, afterMove);
       }
+    },
+    animationDelay: function() {
+      var self = this;
+      if (self.hasClock()) {
+        var times = self.$table.find('div.clock').map(function() {
+          return $(this).clock('getSeconds');
+        }).get();
+        times.sort();
+        return this.options.animation_delay * Math.min(1, times[0] / 120);
+      } else return this.options.animation_delay;
     },
     highlightLastMove: function(notation) {
       var self = this;
@@ -1237,7 +1249,7 @@ var storage = {
       if (!this.possibleMovesContain(orig, dest)) return;
       var $fromSquare = $("#" + orig).orNot();
       var $toSquare = $("#" + dest).orNot();
-      var $piece = $fromSquare.find(".lichess_piece").orNot();
+      var $piece = $fromSquare.find(".piece").orNot();
       if ($fromSquare && $toSquare && $piece) {
         this.dropPiece($piece, $fromSquare, $toSquare, isPremove | false);
       }
@@ -1281,15 +1293,18 @@ var storage = {
           moveData.promotion = "queen";
           sendMoveRequest(moveData);
         } else {
-          var $choices = $('<div class="lichess_promotion_choice">')
+          var html = _.map(['queen', 'knight', 'rook', 'bishop'], function(p) {
+            return '<div data-piece="' + p + '" class="piece ' + p + ' ' + color + '"></div>';
+          }).join('');
+          var $choices = $('<div class="promotion_choice onbg">')
             .appendTo(self.$board)
-            .html('<div data-piece="queen" class="lichess_piece queen ' + color + '"></div><div data-piece="knight" class="lichess_piece knight ' + color + '"></div><div data-piece="rook" class="lichess_piece rook ' + color + '"></div><div data-piece="bishop" class="lichess_piece bishop ' + color + '"></div>')
-            .fadeIn(self.options.animation_delay)
-            .find('div.lichess_piece')
+            .html(html)
+            .fadeIn(self.animationDelay())
+            .find('div.piece')
             .click(function() {
               moveData.promotion = $(this).attr('data-piece');
               sendMoveRequest(moveData);
-              $choices.fadeOut(self.options.animation_delay, function() {
+              $choices.fadeOut(self.animationDelay(), function() {
                 $choices.remove();
               });
             }).end();
@@ -1311,7 +1326,7 @@ var storage = {
         $(this).droppable({
           accept: function(draggable) {
             if (!self.isMyTurn()) {
-              var $piece = $('#' + draggingKey).find('>.lichess_piece');
+              var $piece = $('#' + draggingKey).find('>.piece');
               if ($piece.length) return self.validMove(draggingKey, squareId, $piece);
             } else {
               return draggingKey && self.possibleMovesContain(draggingKey, squareId);
@@ -1327,7 +1342,7 @@ var storage = {
       });
 
       // init pieces
-      self.$board.find("div.lichess_piece." + self.options.player.color).each(function() {
+      self.$board.find("div.piece." + self.options.player.color).each(function() {
         var $this = $(this);
         $this.draggable({
           helper: function() {
@@ -1353,7 +1368,7 @@ var storage = {
        * Code for touch screens like android or iphone
        */
 
-      self.$board.find("div.lichess_piece." + self.options.player.color).each(function() {
+      self.$board.find("div.piece." + self.options.player.color).each(function() {
         $(this).click(function() {
           self.unsetPremove();
           var $square = $(this).parent();
@@ -1371,7 +1386,7 @@ var storage = {
         $this.hover(function() {
           var $selected = self.$board.find('div.lcs.selected');
           if ($selected.length) {
-            var $piece = $selected.find('>.lichess_piece');
+            var $piece = $selected.find('>.piece');
             var validPremove = !self.isMyTurn() && $piece.length && self.validMove($selected.attr('id'), $this.attr('id'), $piece);
             if (validPremove || self.possibleMovesContain($selected.attr('id'), $this.attr('id'))) {
               $this.addClass('selectable');
@@ -1384,7 +1399,7 @@ var storage = {
           var $from = self.$board.find('div.lcs.selected').orNot();
           var $to = $this;
           if (!$from || $from == $to) return;
-          var $piece = $from.find('div.lichess_piece');
+          var $piece = $from.find('div.piece');
           if (!self.isMyTurn() && $from) {
             self.dropPiece($piece, $from, $to);
           } else {
@@ -1429,13 +1444,23 @@ var storage = {
     reloadTable: function(callback) {
       var self = this;
       self.get(self.options.tableUrl, {
-        success: function(html) {
-          self.$tableInner.html(html);
-          self.initTable();
-          if ($.isFunction(callback)) callback();
-          $('body').trigger('lichess.content_loaded');
-        }
-      }, false);
+          success: function(html) {
+            self.$tableInner.html(html);
+            self.initTable();
+            if ($.isFunction(callback)) callback();
+            $('body').trigger('lichess.content_loaded');
+            self.$tableInner.find('.lichess_claim_draw').each(function() {
+              var $link = $(this);
+              if (self.options.autoThreefold == 3) $link.click();
+              if (self.options.autoThreefold == 2) {
+                self.$table.find('.clock_bottom').each(function() {
+                  if ($(this).clock('getSeconds') < 30) $link.click();
+                });
+              }
+            });
+          }
+        },
+        false);
     },
     loadEnd: function(callback) {
       var self = this;
@@ -1467,6 +1492,13 @@ var storage = {
       var self = this;
       self.$table.find(".lichess_control").each(function() {
         $(this).toggleClass("none", $(this).html().trim() === "");
+        $(this).find('a.button:empty').each(function() {
+          $(this).hover(function() {
+            $(this).text(' ' + ($(this).data('title') || $(this).attr('title')));
+          }, function() {
+            $(this).text('');
+          });
+        });
       });
       self.$table.css('top', (256 - self.$table.height() / 2) + 'px');
     },
@@ -1616,7 +1648,8 @@ var storage = {
       this.repaint();
     },
     _renderUser: function(user) {
-      return '<a class="ulpt" data-placement="nw" href="/@/' + user + '">' + user + '</a>';
+      var id = _.last(user.split(' '));
+      return '<a class="ulpt" data-placement="nw" href="/@/' + id + '">' + user + '</a>';
     }
   });
 
@@ -1668,9 +1701,12 @@ var storage = {
       if (self.options.messages.length > 0) self._appendMany(self.options.messages);
     },
     resize: function() {
-      var headHeight = this.element.parent().height();
-      this.element.css("top", headHeight + 13);
-      this.$msgs.css('height', 459 - headHeight).scrollTop(999999);
+      var self = this;
+      setTimeout(function() {
+        var headHeight = self.element.parent().height();
+        self.element.css("top", headHeight + 13);
+        self.$msgs.css('height', 459 - headHeight).scrollTop(999999);
+      }, 10);
     },
     append: function(msg) {
       this._appendHtml(this._render(msg));
@@ -1757,6 +1793,10 @@ var storage = {
     setTime: function(time) {
       this.options.time = parseFloat(time) * 1000;
       this._show();
+    },
+
+    getSeconds: function() {
+      return Math.round(this.options.time / 1000);
     },
 
     stop: function() {
@@ -1856,6 +1896,7 @@ var storage = {
       });
       var boardInteractions = function() {
         $board.find('.lcmp.' + color).draggable({
+          revert: 'invalid',
           scroll: false,
           distance: 10
         });
@@ -2138,14 +2179,13 @@ var storage = {
     };
     var flushHooks = function() {
       clearTimeout(flushHooksTimeout);
-      $tbody.fadeIn(700);
-      $table.clone().attr('id', 'tableclone').appendTo($wrap).fadeOut(700, function() {
+      $tbody.fadeIn(500);
+      $table.clone().attr('id', 'tableclone').appendTo($wrap).fadeOut(500, function() {
         $(this).remove();
       });
       $tbody.find('tr.disabled').remove();
       $tbody.append(nextHooks);
       nextHooks = [];
-      $tbody.find('tr').hide().fadeIn(200);
       $table.trigger('sortable.sort');
       flushHooksSchedule();
     };
@@ -2269,6 +2309,9 @@ var storage = {
               $('body').trigger('lichess.content_loaded');
             }
           });
+        },
+        streams: function(html) {
+          $('#streams_on_air').html(html);
         },
         hook_add: function(hook) {
           addHook(hook);
@@ -2514,6 +2557,10 @@ var storage = {
     });
     $canvas.on('click', '>span.plot:not(.hiding)', function() {
       var hook = $(this).data('hook');
+      if (lichess_preload.engine && hook.mode == 'Rated') {
+        disableHook(hook.id);
+        return;
+      }
       if (hook.action == 'register') {
         if (confirm($.trans('This game is rated') + '.\n' + $.trans('You need an account to do that') + '.')) location.href = '/signup';
         return;
@@ -2533,9 +2580,8 @@ var storage = {
     var $wrap = $('#tournament');
     if (!$wrap.length) return;
 
-    var $userTag = $('#user_tag');
-
     if (!strongSocket.available) return;
+
     if (typeof _ld_ == "undefined") {
       // handle tournament list
       lichess.socketDefaults.params.flag = "tournament";
@@ -2568,10 +2614,25 @@ var storage = {
     }
     startClock();
 
+    function drawBars() {
+      $wrap.find('table.standing').each(function() {
+        var $bars = $(this).find('.bar');
+        var max = _.max($bars.map(function() {
+          return parseInt($(this).data('value'));
+        }));
+        $bars.each(function() {
+          var width = Math.ceil((parseInt($(this).data('value')) * 100) / max);
+          $(this).css('width', width + '%');
+        });
+      });
+    }
+    drawBars();
+
     function reload() {
       $wrap.load($wrap.data("href"), function() {
         startClock();
         $('body').trigger('lichess.content_loaded');
+        drawBars();
       });
     }
 
@@ -2678,6 +2739,7 @@ var storage = {
         events: {
           analysisAvailable: function() {
             $.sound.dong();
+            location.href = location.href.split('#')[0] + '#' + CurrentPly;
             location.reload();
           },
           crowd: function(event) {

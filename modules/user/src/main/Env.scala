@@ -10,6 +10,7 @@ final class Env(
     config: Config,
     db: lila.db.Env,
     scheduler: lila.common.Scheduler,
+    timeline:ActorSelection,
     system: ActorSystem) {
 
   private val settings = new {
@@ -20,6 +21,7 @@ final class Env(
     val RankingTtl = config duration "ranking.ttl"
     val CollectionUser = config getString "collection.user"
     val CollectionHistory = config getString "collection.history"
+    val CollectionNote = config getString "collection.note"
   }
   import settings._
 
@@ -36,6 +38,8 @@ final class Env(
   lazy val onlineUserIdMemo = new ExpireSetMemo(ttl = OnlineTtl)
 
   lazy val ranking = new Ranking(ttl = RankingTtl)
+
+  lazy val noteApi = new NoteApi(db(CollectionNote), timeline)
 
   def ratingChart = cached.ratingChart.apply _
 
@@ -61,13 +65,12 @@ final class Env(
   bus.subscribe(system.actorOf(
     Props(new Actor {
       def receive = {
-        case User.Active(user, lang) => {
+        case User.Active(user, lang) =>
           if (!user.seenRecently) UserRepo setSeenAt user.id
           if (user.lang != lang.some) UserRepo.setLang(user.id, lang)
           onlineUserIdMemo put user.id
-        }
       }
-    }), name = "user-active"), 'userActive)
+    })), 'userActive)
 
   {
     import scala.concurrent.duration._
@@ -90,5 +93,6 @@ object Env {
     config = lila.common.PlayApp loadConfig "user",
     db = lila.db.Env.current,
     scheduler = lila.common.PlayApp.scheduler,
+    timeline = lila.hub.Env.current.actor.timeline,
     system = lila.common.PlayApp.system)
 }

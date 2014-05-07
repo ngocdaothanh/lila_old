@@ -15,6 +15,7 @@ private[round] final class Player(
     bus: lila.common.Bus,
     finisher: Finisher,
     cheatDetector: CheatDetector,
+    reminder: Reminder,
     uciMemo: UciMemo) {
 
   def human(play: HumanPlay, round: ActorRef)(pov: Pov): Fu[Events] = play match {
@@ -37,6 +38,7 @@ private[round] final class Player(
                     cheatDetector(progress.game) addEffect {
                       case Some(color) => round ! Cheat(color)
                       case None =>
+                        reminder remind progress.game
                         if (progress.game.playableByAi) round ! AiPlay
                         if (game.player.isOfferingDraw) round ! DrawNo(game.player.id)
                         if (game.player.isProposingTakeback) round ! TakebackNo(game.player.id)
@@ -64,17 +66,12 @@ private[round] final class Player(
   private def notifyProgress(move: chess.Move, progress: Progress, ip: String) {
     val game = progress.game
     val chess = game.toChess
-    val meta = {
-      if (move.captures) "x" else ""
-    } + {
-      if (game.finished) "#" else if (chess.situation.check) "+" else ""
-    }
     bus.publish(MoveEvent(
       ip = ip,
       gameId = game.id,
       fen = Forsyth exportBoard chess.board,
-      move = move.keyString,
-      meta = meta), 'moveEvent)
+      move = move.keyString
+    ), 'moveEvent)
   }
 
   private def moveFinish(game: Game, color: Color): Fu[Events] = game.status match {

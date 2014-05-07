@@ -44,9 +44,7 @@ trait UserRepo {
   def topSlow = topPerf("slow") _
 
   def topPerf(perf: String)(nb: Int): Fu[List[User]] =
-    $find($query(
-      goodLadSelect ++ Json.obj(s"perfs.$perf.gl.d" -> $lt(100))
-    ) sort ($sort desc s"perfs.$perf.gl.r"), nb)
+    $find($query(stableGoodLadSelect) sort ($sort desc s"perfs.$perf.gl.r"), nb)
 
   def topNbGame(nb: Int): Fu[List[User]] =
     $find($query(enabledSelect) sort ($sort desc "count.game"), nb)
@@ -113,7 +111,7 @@ trait UserRepo {
 
   val enabledSelect = Json.obj("enabled" -> true)
   def engineSelect(v: Boolean) = Json.obj(User.BSONFields.engine -> v.fold(JsBoolean(true), $ne(true)))
-  val stableSelect = Json.obj("perfs.global.gl.d" -> $lt(100))
+  val stableSelect = Json.obj("perfs.global.nb" -> $gte(50))
   val goodLadSelect = enabledSelect ++ engineSelect(false)
   val stableGoodLadSelect = stableSelect ++ goodLadSelect
   def minRatingSelect(rating: Int) = Json.obj(User.BSONFields.rating -> $gt(rating))
@@ -148,7 +146,8 @@ trait UserRepo {
     $update($select(id), $incBson(incs: _*))
   }
 
-  def incToints(id: ID)(nb: Int) = $update($select(id), $incBson("toints" -> nb))
+  def incToints(id: ID, nb: Int) = $update($select(id), $incBson("toints" -> nb))
+  def removeAllToints = $update($select.all, $unset("toints"), multi = true)
 
   def averageRating: Fu[Float] = $primitive($select.all, "rating")(_.asOpt[Float]) map { ratings =>
     ratings.sum / ratings.size.toFloat

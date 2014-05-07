@@ -43,8 +43,9 @@ trait I18nHelper {
   def langLinks(lang: Lang)(implicit ctx: UserContext) = Html {
     langLinksCache.getOrElseUpdate(lang.language, {
       pool.names.toList sortBy (_._1) map {
-        case (code, name) => """<li><a lang="%s" href="%s"%s>%s</a></li>""".format(
+        case (code, name) => """<li><a lang="%s" title="%s" href="%s"%s>%s</a></li>""".format(
           code,
+          trans.freeOnlineChess.to(Lang(code))(),
           langUrl(Lang(code))(I18nDomain(ctx.req.domain)),
           (code == lang.language) ?? """ class="current"""",
           name)
@@ -53,12 +54,19 @@ trait I18nHelper {
   }
 
   def langFallbackLinks(implicit ctx: UserContext) = Html {
-    {
-      pool.preferredNames(ctx.req, 3) map {
-        case (code, name) => """<a class="lang_fallback" lang="%s" href="%s">%s</a>""".format(
-          code, langUrl(Lang(code))(I18nDomain(ctx.req.domain)), name)
-      } mkString ""
-    }.replace(uriPlaceholder, ctx.req.uri)
+    pool.preferredNames(ctx.req, 3).map {
+      case (code, name) => """<a class="lang_fallback" lang="%s" href="%s">%s</a>""".format(
+        code, langUrl(Lang(code))(I18nDomain(ctx.req.domain)), name)
+    }.mkString("").replace(uriPlaceholder, ctx.req.uri)
+  }
+
+  private lazy val langAnnotationsBase: String =
+    pool.names.keySet diff Set("fp", "kb", "le", "tp") map { code =>
+      s"""<link rel="alternate" hreflang="$code" href="http://$code.lichess.org%"/>"""
+    } mkString ""
+
+  def langAnnotations(implicit ctx: UserContext) = Html {
+    langAnnotationsBase.replace("%", ctx.req.uri)
   }
 
   def commonDomain(implicit ctx: UserContext): String =

@@ -25,6 +25,7 @@ sealed abstract class RemindDeploy(val key: String)
 case object RemindDeployPre extends RemindDeploy("deployPre")
 case object RemindDeployPost extends RemindDeploy("deployPost")
 case class Deploy(event: RemindDeploy, html: String)
+case class StreamsOnAir(html: String)
 
 package map {
 case class Get(id: String)
@@ -71,18 +72,22 @@ case class Follow(u1: String, u2: String) extends Atom
 case class TeamJoin(userId: String, teamId: String) extends Atom
 case class TeamCreate(userId: String, teamId: String) extends Atom
 case class ForumPost(userId: String, topicName: String, postId: String) extends Atom
+case class NoteCreate(from: String, to: String) extends Atom
+case class TourJoin(userId: String, tourId: String, tourName: String) extends Atom
 
 object atomFormat {
-
   implicit val followFormat = Json.format[Follow]
   implicit val teamJoinFormat = Json.format[TeamJoin]
   implicit val teamCreateFormat = Json.format[TeamCreate]
   implicit val forumPostFormat = Json.format[ForumPost]
+  implicit val noteCreateFormat = Json.format[NoteCreate]
+  implicit val tourJoinFormat = Json.format[TourJoin]
 }
 
 object propagation {
   sealed trait Propagation
   case class Users(users: List[String]) extends Propagation
+  case class Followers(user: String) extends Propagation
   case class Friends(user: String) extends Propagation
   case class StaffFriends(user: String) extends Propagation
 }
@@ -91,6 +96,7 @@ import propagation._
 
 case class Propagate(data: Atom, propagations: List[Propagation] = Nil) {
   def toUsers(ids: List[String]) = copy(propagations = Users(ids) :: propagations)
+  def toFollowersOf(id: String) = copy(propagations = Followers(id) :: propagations)
   def toFriendsOf(id: String) = copy(propagations = Friends(id) :: propagations)
   def toStaffFriendsOf(id: String) = copy(propagations = StaffFriends(id) :: propagations)
 }
@@ -115,6 +121,7 @@ case class Player(fullId: String)
 case class Watcher(gameId: String, color: String)
 case class Pgn(gameId: String)
 case class Tourney(tourId: String)
+case class Puzzle(id: Int)
 }
 
 package forum {
@@ -122,7 +129,8 @@ case class MakeTeam(id: String, name: String)
 }
 
 package ai {
-case class Analyse(uciMoves: List[String], initialFen: Option[String])
+case class Analyse(gameId: String, uciMoves: List[String], initialFen: Option[String], requestedByHuman: Boolean)
+case class AutoAnalyse(gameId: String)
 }
 
 package monitor {
@@ -135,8 +143,12 @@ case class MoveEvent(
   gameId: String,
   fen: String,
   move: String,
-  ip: String,
-  meta: String) // x, +, #, +x, #x
+  ip: String)
+}
+
+package evaluation {
+  case class AutoCheck(userId: String)
+  case class Refresh(userId: String)
 }
 
 package bookmark {

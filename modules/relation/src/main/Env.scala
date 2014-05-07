@@ -12,14 +12,16 @@ final class Env(
     hub: lila.hub.Env,
     getOnlineUserIds: () => Set[String],
     lightUser: String => Option[lila.common.LightUser],
+    followable: String => Fu[Boolean],
     system: ActorSystem,
     scheduler: lila.common.Scheduler) {
 
   private val settings = new {
     val CollectionRelation = config getString "collection.relation"
     val ActorNotifyFreq = config duration "actor.notify_freq"
-    val ActorResyncFreq = config duration "actor.resync_freq"
     val ActorName = config getString "actor.name"
+    val MaxFollow = config getInt "limit.follow"
+    val MaxBlock = config getInt "limit.block"
   }
   import settings._
 
@@ -28,7 +30,10 @@ final class Env(
     actor = hub.actor.relation,
     bus = system.lilaBus,
     getOnlineUserIds = getOnlineUserIds,
-    timeline = hub.actor.timeline)
+    timeline = hub.actor.timeline,
+    followable = followable,
+    maxFollow = MaxFollow,
+    maxBlock = MaxBlock)
 
   private lazy val cached = new Cached
 
@@ -40,15 +45,10 @@ final class Env(
 
   {
     import scala.concurrent.duration._
-    import makeTimeout.short
 
     scheduler.once(5 seconds) {
       scheduler.message(ActorNotifyFreq) {
         actor -> actorApi.NotifyMovement
-      }
-
-      scheduler.message(ActorResyncFreq) {
-        actor -> actorApi.ReloadAllOnlineFriends
       }
     }
   }
@@ -64,6 +64,7 @@ object Env {
     hub = lila.hub.Env.current,
     getOnlineUserIds = () => lila.user.Env.current.onlineUserIdMemo.keySet,
     lightUser = lila.user.Env.current.lightUser,
+    followable = lila.pref.Env.current.api.followable _,
     system = lila.common.PlayApp.system,
     scheduler = lila.common.PlayApp.scheduler)
 }

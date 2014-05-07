@@ -4,8 +4,8 @@ package templating
 import java.util.Locale
 import scala.collection.mutable
 
-import org.joda.time.DateTime
 import org.joda.time.format._
+import org.joda.time.{ Period, DateTime }
 import play.api.templates.Html
 
 import lila.api.Context
@@ -17,6 +17,7 @@ trait DateHelper { self: I18nHelper =>
 
   private val dateTimeFormatters = mutable.Map[String, DateTimeFormatter]()
   private val dateFormatters = mutable.Map[String, DateTimeFormatter]()
+  private val periodFormatters = mutable.Map[String, PeriodFormatter]()
 
   private val isoFormatter = ISODateTimeFormat.dateTime
 
@@ -30,11 +31,19 @@ trait DateHelper { self: I18nHelper =>
       lang(ctx).language,
       DateTimeFormat forStyle dateStyle withLocale new Locale(lang(ctx).language))
 
+  private def periodFormatter(ctx: Context): PeriodFormatter =
+    periodFormatters.getOrElseUpdate(
+      lang(ctx).language,
+      PeriodFormat wordBased new Locale(lang(ctx).language))
+
   def showDateTime(date: DateTime)(implicit ctx: Context): String =
     dateTimeFormatter(ctx) print date
 
   def showDate(date: DateTime)(implicit ctx: Context): String =
     dateFormatter(ctx) print date
+
+  def showPeriod(period: Period)(implicit ctx: Context): String =
+    periodFormatter(ctx) print period
 
   def isoDate(date: DateTime): String = isoFormatter print date
 
@@ -47,17 +56,14 @@ trait DateHelper { self: I18nHelper =>
     s"""<time class="moment-from-now" datetime="${isoFormatter print date}"></time>"""
   }
 
-  def momentLang(implicit ctx: Context): Option[String] = lang(ctx).language match {
-    case "en" => none
-    case "pt" => "pt-br".some
-    case "zh" => "zh-cn".some
-    case l    => momentLangs(l) option l
-  }
-
-  private lazy val momentLangs: Set[String] = {
-    val Regex = """^(\w{2})\.min\.js$""".r
-    (new java.io.File(Env.current.momentLangsPath).listFiles map (_.getName) collect {
-      case Regex(l) => l
-    }).toSet
+  def momentLangTag(implicit ctx: Context) = Html {
+    (lang(ctx).language match {
+      case "en" => none
+      case "pt" => "pt-br".some
+      case "zh" => "zh-cn".some
+      case l    => l.some
+    }) ?? { l =>
+      s"""<script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.6.0/lang/$l.js"></script>"""
+    }
   }
 }

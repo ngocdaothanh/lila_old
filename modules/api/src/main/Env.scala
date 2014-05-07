@@ -12,6 +12,7 @@ final class Env(
     pgnDump: lila.game.PgnDump,
     userEnv: lila.user.Env,
     analyseEnv: lila.analyse.Env,
+    puzzleEnv: lila.puzzle.Env,
     userIdsSharingIp: String => Fu[List[String]],
     val isProd: Boolean) {
 
@@ -41,9 +42,14 @@ final class Env(
     isOnline = userEnv.isOnline)
 
   val analysisApi = new AnalysisApi(
+    apiToken = apiToken,
     makeUrl = apiUrl,
     nbAnalysis = () => analyseEnv.cached.nbAnalysis,
     pgnDump = pgnDump)
+
+  val puzzleApi = new PuzzleApi(
+    env = puzzleEnv,
+    makeUrl = apiUrl)
 
   private def apiUrl(msg: Any): Fu[String] = {
     import akka.pattern.ask
@@ -62,6 +68,7 @@ object Env {
     router = lila.hub.Env.current.actor.router,
     userEnv = lila.user.Env.current,
     analyseEnv = lila.analyse.Env.current,
+    puzzleEnv = lila.puzzle.Env.current,
     pgnDump = lila.game.Env.current.pgnDump,
     userIdsSharingIp = lila.security.Env.current.api.userIdsSharingIp,
     bus = lila.common.PlayApp.system.lilaBus,

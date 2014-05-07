@@ -36,7 +36,7 @@ object Dependencies {
   val apache = "org.apache.commons" % "commons-lang3" % "3.2.1"
   val scalaTime = "com.github.nscala-time" %% "nscala-time" % "0.8.0"
   val guava = "com.google.guava" % "guava" % "16.0.1"
-  val findbugs = "com.google.code.findbugs" % "jsr305" % "2.0.1"
+  val findbugs = "com.google.code.findbugs" % "jsr305" % "2.0.3"
   val csv = "com.github.tototoshi" %% "scala-csv" % "1.0.0"
   val hasher = "com.roundeights" %% "hasher" % "1.0.0"
   val jgit = "org.eclipse.jgit" % "org.eclipse.jgit" % "3.2.0.201312181205-r"
@@ -45,13 +45,15 @@ object Dependencies {
   val elastic4s = "com.sksamuel.elastic4s" %% "elastic4s" % "1.0.1.0"
   val RM = "org.reactivemongo" %% "reactivemongo" % "0.10.0"
   val PRM = "org.reactivemongo" %% "play2-reactivemongo" % "0.10.2"
+  val maxmind = "com.snowplowanalytics"  %% "scala-maxmind-geoip"  % "0.0.5"
+
   object play {
-    val version = "2.2.1"
+    val version = "2.2.3"
     val api = "com.typesafe.play" %% "play" % version
     val test = "com.typesafe.play" %% "play-test" % version
   }
   object spray {
-    val version = "1.2.0"
+    val version = "1.2.1"
     val caching = "io.spray" % "spray-caching" % version
     val util = "io.spray" % "spray-util" % version
   }

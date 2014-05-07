@@ -16,6 +16,7 @@ final class Env(
 
   private val settings = new {
     val Endpoint = c getString "endpoint"
+    val CallbackUrl = c getString "callback_url"
     val ActorName = c getString "actor.name"
     val CollectionAiPerf = c getString "collection.ai_perf"
     val AiPerfCacheTtl = c duration "ai_perf.cache_ttl"
@@ -32,29 +33,25 @@ final class Env(
     playMaxMoveTime = c duration "play.movetime",
     analyseMoveTime = c duration "analyse.movetime",
     playTimeout = c duration "play.timeout",
-    analyseTimeout = c duration "analyse.timeout",
     analyseMaxPlies = c getInt "analyse.max_plies",
     debug = c getBoolean "debug")
 
   lazy val aiPerfApi = new AiPerfApi(db(CollectionAiPerf), AiPerfCacheTtl)
 
-  def ratingOf(level: Int) = aiPerfApi.intRatings map (_ get level)
+  def ratingOf(level: Int) = aiPerfApi.intRatings get level
 
   // api actor
   system.actorOf(Props(new Actor {
     def receive = {
-      case lila.hub.actorApi.ai.Analyse(uciMoves, fen) =>
-        val replyTo = sender
-        client.analyse(uciMoves, fen) onComplete {
-          case scala.util.Success(a)   => replyTo ! a
-          case scala.util.Failure(err) => replyTo ! Status.Failure(err)
-        }
+      case lila.hub.actorApi.ai.Analyse(gameId, uciMoves, fen, requestedByHuman) =>
+        client.analyse(gameId, uciMoves, fen, requestedByHuman)
     }
   }), name = ActorName)
 
   lazy val client = new Client(
     config = config,
     endpoint = Endpoint,
+    callbackUrl = CallbackUrl,
     uciMemo = uciMemo)
 
   lazy val server = new Server(

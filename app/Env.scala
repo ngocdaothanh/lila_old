@@ -13,21 +13,20 @@ final class Env(
   private val RendererName = config getString "app.renderer.name"
   private val RouterName = config getString "app.router.name"
   private val WebPath = config getString "app.web_path"
-  private val MomentLangPaths = config getString "app.moment_langs_path"
-
-  def momentLangsPath = appPath + "/" + MomentLangPaths
 
   lazy val bus = lila.common.Bus(system)
 
   lazy val preloader = new mashup.Preload(
     lobby = Env.lobby.lobby,
     history = Env.lobby.history,
-    featured = Env.game.featured,
+    featured = Env.tv.featured,
     relations = Env.relation.api,
     leaderboard = Env.user.cached.topRatingDay.apply,
     progress = Env.user.cached.topProgressDay.apply,
     timelineEntries = Env.timeline.getter.userEntries _,
-    dailyPuzzle = Env.puzzle.daily)
+    nowPlaying = Env.round.nowPlaying,
+    dailyPuzzle = Env.puzzle.daily,
+    streamsOnAir = () => Env.tv.streamsOnAir)
 
   lazy val userInfo = mashup.UserInfo(
     countUsers = () => Env.user.countEnabled,
@@ -38,11 +37,6 @@ final class Env(
     postApi = Env.forum.postApi,
     getRatingChart = Env.user.ratingChart,
     getRank = Env.user.ranking.get) _
-
-  if (config getBoolean "ai.stress") {
-    println("Stressing AI...")
-    new AiStresser(Env.ai, system, Env.game.uciMemo).apply
-  }
 
   system.actorOf(Props(new actor.Renderer), name = RendererName)
 
@@ -74,7 +68,8 @@ final class Env(
       Env.pref,
       Env.evaluation,
       Env.chat,
-      Env.puzzle)
+      Env.puzzle,
+      Env.tv)
     loginfo("[boot] Preloading complete")
   }
 
@@ -127,4 +122,6 @@ object Env {
   def evaluation = lila.evaluation.Env.current
   def chat = lila.chat.Env.current
   def puzzle = lila.puzzle.Env.current
+  def coordinate = lila.coordinate.Env.current
+  def tv = lila.tv.Env.current
 }

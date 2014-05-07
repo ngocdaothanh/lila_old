@@ -21,30 +21,22 @@ private[relation] final class RelationActor(
 
   def receive = {
 
-    case GetOnlineFriends(userId)    => onlineFriends(userId) pipeTo sender
+    case GetOnlineFriends(userId) => onlineFriends(userId) pipeTo sender
 
     // triggers following reloading for this user id
-    case ReloadOnlineFriends(userId) => reloadOnlineFriends(userId)
-
-    case AllOnlineFriends(o) =>
-      onlines = o
-      onlineIds foreach reloadOnlineFriends
-
-    case ReloadAllOnlineFriends => self ! AllOnlineFriends(
-      getOnlineUserIds().map { id => lightUser(id) map (id -> _) }.flatten.toMap
-    )
+    case ReloadOnlineFriends(userId) => onlineFriends(userId) foreach {
+      case OnlineFriends(users) =>
+        bus.publish(SendTo(userId, "following_onlines", users.map(_.titleName)), 'users)
+    }
 
     case NotifyMovement =>
       val prevIds = onlineIds
       val curIds = getOnlineUserIds()
       val leaveIds = (prevIds diff curIds).toList
       val enterIds = (curIds diff prevIds).toList
-      val leaves = leaveIds.map(onlines.get).flatten
-      val enters = enterIds.map(onlines.get).flatten
-      self ! Movement(leaves, enters)
-
-    case Movement(leaves, enters) =>
-      onlines = onlines -- leaves.map(_.id) ++ enters.map(e => e.id -> e)
+      val leaves = leaveIds.flatMap(i => lightUser(i))
+      val enters = enterIds.flatMap(i => lightUser(i))
+      onlines = onlines -- leaveIds ++ enters.map(e => e.id -> e)
       notifyFollowers(enters, "following_enters")
       notifyFollowers(leaves, "following_leaves")
   }
@@ -53,21 +45,13 @@ private[relation] final class RelationActor(
 
   private def onlineFriends(userId: String): Fu[OnlineFriends] =
     api following userId map { ids =>
-      OnlineFriends((ids intersect onlineIds).map(lightUser).flatten.toList)
+      OnlineFriends(ids.flatMap(onlines.get).toList)
     }
-
-  private def reloadOnlineFriends(userId: String) {
-    onlineFriends(userId) foreach {
-      case OnlineFriends(users) =>
-        bus.publish(SendTo(userId, "following_onlines", users.map(_.name)), 'users)
-    }
-  }
 
   private def notifyFollowers(users: List[LightUser], message: String) {
     users foreach { user =>
-      api followers user.id foreach { ids =>
-        val notify = ids filter onlines.contains
-        if (notify.nonEmpty) bus.publish(SendTos(notify.toSet, message, user.name), 'users)
+      api followers user.id map (_ filter onlines.contains) foreach { ids =>
+        if (ids.nonEmpty) bus.publish(SendTos(ids.toSet, message, user.titleName), 'users)
       }
     }
   }

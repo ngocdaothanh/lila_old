@@ -9,7 +9,7 @@ import play.api.mvc.Call
 import controllers.routes
 import lila.api.Context
 import lila.forum.PostLiteView
-import lila.game.{ Game, GameRepo, Featured }
+import lila.game.{ Game, GameRepo, Pov }
 import lila.lobby.actorApi.GetOpen
 import lila.lobby.{ Hook, HookRepo }
 import lila.relation.RelationApi
@@ -17,6 +17,7 @@ import lila.setup.FilterConfig
 import lila.socket.History
 import lila.timeline.Entry
 import lila.tournament.Created
+import lila.tv.{ Featured, StreamOnAir }
 import lila.user.User
 import makeTimeout.large
 
@@ -28,9 +29,11 @@ final class Preload(
     leaderboard: Int => Fu[List[User]],
     progress: Int => Fu[List[User]],
     timelineEntries: String => Fu[List[Entry]],
+    nowPlaying: (User, Int) => Fu[List[Pov]],
+    streamsOnAir: => () => Fu[List[StreamOnAir]],
     dailyPuzzle: () => Fu[Option[lila.puzzle.DailyPuzzle]]) {
 
-  private type RightResponse = (JsObject, List[Entry], List[PostLiteView], List[Created], Option[Game], List[User], List[User], Option[lila.puzzle.DailyPuzzle])
+  private type RightResponse = (JsObject, List[Entry], List[PostLiteView], List[Created], Option[Game], List[User], List[User], Option[lila.puzzle.DailyPuzzle], List[Pov], List[StreamOnAir])
   private type Response = Either[Call, RightResponse]
 
   def apply(
@@ -46,13 +49,16 @@ final class Preload(
       leaderboard(10) zip
       progress(10) zip
       dailyPuzzle() zip
-      filter map {
-        case (((((((((hooks, posts), tours), feat), blocks), entries), leaderboard), progress), puzzle), filter) =>
+      (ctx.me ?? { nowPlaying(_, 3) }) zip
+      filter zip
+      streamsOnAir() map {
+        case (((((((((((hooks, posts), tours), feat), blocks), entries), leaderboard), progress), puzzle), playing), filter), streams) =>
           (Right((Json.obj(
             "version" -> history.version,
             "pool" -> JsArray(hooks map (_.render)),
             "filter" -> filter.render,
-            "blocks" -> blocks
-          ), entries, posts, tours, feat, leaderboard, progress, puzzle)))
+            "blocks" -> blocks,
+            "engine" -> ctx.me.??(_.engine)
+          ), entries, posts, tours, feat, leaderboard, progress, puzzle, playing, streams)))
       }
 }
