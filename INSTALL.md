@@ -166,6 +166,12 @@ Modify boardEditor.js:
 var pieceTheme = '/assets/images/piece/{piece}.svg’;
 ```
 
+## Geo-IP
+
+https://github.com/snowplow/scala-maxmind-geoip
+
+TODO: Where to put Geo-IP data file?
+
 ## Run Lila
 
 Rerun Lila in production mode (need sudo if use port 80):
