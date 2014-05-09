@@ -1,5 +1,9 @@
 User-agent: *
-Allow: /
-Disallow: /account
-Disallow: /timeline
-Disallow: /rel
+
+# Temporarily disallow all crawlers
+Disallow: /
+
+#Allow: /
+#Disallow: /account
+#Disallow: /timeline
+#Disallow: /rel
