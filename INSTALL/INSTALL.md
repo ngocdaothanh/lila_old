@@ -35,15 +35,15 @@ sudo apt-get install openjdk-7-jdk
 
 ## Install Play
 
-Use Play 2.2.2 (latest version).
+Use Play 2.2.3 (latest version).
 
 ```
 mkdir /home/jan/opt
 
 cd /home/jan/opt
-wget http://downloads.typesafe.com/play/2.2.2/play-2.2.2.zip
+wget http://downloads.typesafe.com/play/2.2.3/play-2.2.3.zip
 sudo apt-get install unzip
-unzip play-2.2.2.zip
+unzip play-2.2.3.zip
 ```
 
 ## Install Lila
@@ -61,7 +61,7 @@ Try running Lila (1st run will take several minutes to download dependency .jar 
 
 ```
 cd /home/jan/opt/lila
-/home/jan/opt/play-2.2.2/play run
+/home/jan/opt/play-2.2.3/play run
 ```
 
 Access the server at http://isachy.cz:9000/
@@ -140,7 +140,7 @@ Modify base.conf:
 ```
 net {
   #domain = "lichess.org"
-  domain = "en.isachy.cz"
+  domain = "isachy.cz"
 ```
 
 Modify /etc/hosts on your local machine (Yes! On your machine, not the server
@@ -149,6 +149,7 @@ IP address of isachy.cz. This problem can be fixed by modifying
 the source code of Lila or using the domain that we control.)
 
 ```
+37.59.2.183 isachy.cz
 37.59.2.183 en.isachy.cz
 37.59.2.183 socket.en.isachy.cz
 37.59.2.183 static.isachy.cz
@@ -197,6 +198,16 @@ See:
 * https://github.com/mcostalba/Stockfish
 * UCI: http://en.wikipedia.org/wiki/Universal_Chess_Interface
 
+## Install Elastic Search
+
+::
+
+  wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.1.zip
+  unzip elasticsearch-1.1.1.zip
+  mv elasticsearch-1.1.1 ~/opt
+  cd ~/opt/elasticsearch-1.1.1
+  bin/elasticsearch
+
 ## Install Geo-IP
 
 https://github.com/snowplow/scala-maxmind-geoip
@@ -209,13 +220,13 @@ Rerun Lila in production mode (need sudo if use port 80):
 
 ```
 cd /home/jan/opt/lila
-sudo /home/jan/opt/play-2.2.2/play “run 80”
+sudo /home/jan/opt/play-2.2.3/play “run 80”
 ```
 
 (See: http://stackoverflow.com/questions/8205067/how-do-i-change-the-default-port-9000-that-play-uses-when-i-execute-the-run)
 
 From browser, go to:
-http://en.isachy.cz/
+http://isachy.cz/
 
 ## Create public/trans/*.js
 
