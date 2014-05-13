@@ -236,3 +236,9 @@ change the username and restart the server):
 ```
 curl -X POST -v -d 'password=<the password above>&command=i18n js dump' http://en.isachy.cz/cli
 ```
+
+## Initialize Elastic Search data
+
+```
+curl -X POST -v -d 'password=<the password above>&command=game search reset' http://en.isachy.cz/cli
+```
