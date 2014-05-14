@@ -241,4 +241,6 @@ curl -X POST -v -d 'password=<the password above>&command=i18n js dump' http://e
 
 ```
 curl -X POST -v -d 'password=<the password above>&command=game search reset' http://en.isachy.cz/cli
+curl -X POST -v -d 'password=<the password above>&command=forum search reset' http://en.isachy.cz/cli
+curl -X POST -v -d 'password=<the password above>&command=team search reset' http://en.isachy.cz/cli
 ```
