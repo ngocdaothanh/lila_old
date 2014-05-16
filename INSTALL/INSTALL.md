@@ -212,7 +212,13 @@ See:
 
 https://github.com/snowplow/scala-maxmind-geoip
 
-TODO: Where to put Geo-IP data file?
+Run:
+
+::
+
+  bin/gen/geoip
+
+Geo-IP data file will be put to ``data/GeoLiteCity.dat``.
 
 ## Run Lila
 
