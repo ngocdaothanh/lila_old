@@ -10,7 +10,8 @@ $(function() {
       }, 10);
     });
     $searchForm.submit(function() {
-      location.href = $searchForm.attr('action') + '/' + $searchInput.val();
+      var action = $searchForm.attr('action');  // "/@/"
+      location.href = action + $searchInput.val();
       return false;
     });
   }
